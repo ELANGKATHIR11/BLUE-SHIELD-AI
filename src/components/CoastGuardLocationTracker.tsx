@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { MapPin, Satellite, AlertCircle, CheckCircle, Shield, Activity } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Satellite, AlertCircle, CheckCircle, Shield, Activity } from 'lucide-react';
 import { debugGeolocation, getGeolocationErrorMessage, checkGeolocationSupport } from '../utils/geolocationDebug';
 
 interface CoastGuardLocationTrackerProps {
@@ -159,7 +159,7 @@ const CoastGuardLocationTracker: React.FC<CoastGuardLocationTrackerProps> = ({
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [isTracking]);
+  }, [isTracking, vesselId]);
 
   const handleRetry = () => {
     setLocationStatus('requesting');

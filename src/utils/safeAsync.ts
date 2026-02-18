@@ -89,7 +89,7 @@ export const safeJSON = {
     );
   },
   
-  stringify: (value: any, fallback: string = '{}'): string => {
+  stringify: (value: unknown, fallback: string = '{}'): string => {
     return safeSync(
       () => JSON.stringify(value),
       fallback,

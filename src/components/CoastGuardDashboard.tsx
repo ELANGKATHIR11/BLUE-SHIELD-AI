@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Send, AlertTriangle, Phone, MapPin, Clock, MessageSquare, Shield, RefreshCw } from 'lucide-react';
+import { Users, Send, Phone, MapPin, Clock, MessageSquare } from 'lucide-react';
 import { BoatData, CoastGuardMessage } from '../App';
 
 interface CoastGuardDashboardProps {
@@ -7,7 +7,6 @@ interface CoastGuardDashboardProps {
   onSendMessage: (targetBoat: string, message: string, priority: 'low' | 'medium' | 'high') => void;
   onUpdateBoatStatus: (aisId: string, status: BoatData['status']) => void;
   messages: CoastGuardMessage[];
-  onRefreshVessels?: () => void;
 }
 
 const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
@@ -15,7 +14,6 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
   onSendMessage,
   onUpdateBoatStatus,
   messages,
-  onRefreshVessels
 }) => {
   const [selectedBoat, setSelectedBoat] = useState<string>('');
   const [messageText, setMessageText] = useState('');
@@ -65,7 +63,7 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
     };
 
     const storedVessels = localStorage.getItem('registeredVessels');
-    let vessels = storedVessels ? JSON.parse(storedVessels) : [];
+    const vessels = storedVessels ? JSON.parse(storedVessels) : [];
     vessels.push(testVessel);
     localStorage.setItem('registeredVessels', JSON.stringify(vessels));
     
@@ -85,15 +83,6 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
               <Users className="h-5 w-5 mr-2" />
               Active Vessels ({boats.length})
             </h3>
-            {onRefreshVessels && (
-              <button
-                onClick={onRefreshVessels}
-                className="bg-red-500 hover:bg-red-400 text-white p-2 rounded-lg transition-colors flex items-center"
-                title="Refresh vessel data"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-            )}
           </div>
         </div>
         
@@ -106,15 +95,8 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
                 No fishermen have registered yet. Once fishermen register through the portal,
                 their vessels will appear here for monitoring.
               </p>
-              {onRefreshVessels && (
-                <button
-                  onClick={onRefreshVessels}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center mx-auto"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Check for New Registrations
-                </button>
-              )}
+
+
               <div className="mt-4 text-xs text-gray-400">
                 💡 Tip: Open the fisherman portal in another tab to register a vessel
               </div>
@@ -133,16 +115,6 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
                 <div className="text-sm text-gray-600">
                   Showing {boats.length} active vessel{boats.length !== 1 ? 's' : ''}
                 </div>
-                {onRefreshVessels && (
-                  <button
-                    onClick={onRefreshVessels}
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors flex items-center"
-                    title="Refresh vessel data"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh
-                  </button>
-                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {boats.map((boat) => (
@@ -214,6 +186,7 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
                   onChange={(e) => setSelectedBoat(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
+                  title="Select Target Vessel"
                 >
                   <option value="">Select a vessel...</option>
                   {boats.map((boat) => (
@@ -230,6 +203,7 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
                   value={messagePriority}
                   onChange={(e) => setMessagePriority(e.target.value as 'low' | 'medium' | 'high')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  title="Select Message Priority"
                 >
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>

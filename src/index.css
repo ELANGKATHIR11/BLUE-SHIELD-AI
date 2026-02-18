@@ -14,3 +14,63 @@
     opacity: 1;
   }
 }
+
+.font-tamil {
+  font-family: "Noto Sans Tamil", sans-serif;
+}
+
+:root {
+  --bg-deep: #0a192f;
+  --bg-card: rgba(16, 33, 65, 0.7);
+  --accent-cyan: #00f2ff;
+  --accent-blue: #3b82f6;
+  --text-primary: #e6f1ff;
+  --text-secondary: #8892b0;
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+.glass-panel {
+  background: var(--bg-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.cyan-glow {
+  text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+}
+
+.bg-cyan-pulse {
+  animation: bg-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes bg-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.4; }
+}
+
+/* Risk progress bar – width driven by --risk-width CSS custom property */
+.risk-progress-bar {
+  width: var(--risk-width, 0%);
+}
+
+/* Leaflet map wrapper — overflow visible so zoom controls aren't clipped */
+.map-outer-wrapper {
+  overflow: visible;
+}
+
+/* Map inner container — clips tiles but keeps rounded bottom corners */
+.map-inner-container {
+  overflow: hidden;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+/* Ensure Leaflet controls always render above everything */
+.leaflet-control-container { z-index: 1000 !important; }
+.leaflet-top, .leaflet-bottom { z-index: 1000 !important; }

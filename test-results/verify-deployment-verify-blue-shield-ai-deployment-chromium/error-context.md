@@ -1,0 +1,67 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e7]:
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - img [ref=e10]
+      - heading "BLUE SHIELD AI" [level=1] [ref=e14]
+    - paragraph [ref=e15]: AI-Powered Maritime Intelligence System
+    - button "← Back to Portal Selection" [ref=e16] [cursor=pointer]
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - img [ref=e22]
+      - heading "Vessel Registration" [level=2] [ref=e26]
+      - paragraph [ref=e27]: Enter your vessel credentials to begin advanced AI monitoring
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - img [ref=e31]
+          - text: AIS Signal ID
+        - textbox "AIS Signal ID" [ref=e37]:
+          - /placeholder: Enter 9-digit AIS ID
+          - text: "123456789"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - img [ref=e40]
+          - text: Registered Boat ID
+        - textbox "Registered Boat ID" [ref=e44]:
+          - /placeholder: Enter boat registration ID
+          - text: BOAT-TEST-1
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - img [ref=e47]
+          - text: Captain/Fisherman Name
+        - textbox "Captain/Fisherman Name" [ref=e51]:
+          - /placeholder: Enter captain or fisherman name
+          - text: Test Captain
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - img [ref=e54]
+          - text: Contact Phone Number
+        - textbox "Contact Phone Number" [ref=e60]:
+          - /placeholder: Enter phone number for emergency contact
+          - text: "9999999999"
+      - button "Begin AI Monitoring" [ref=e61] [cursor=pointer]:
+        - generic [ref=e62]:
+          - text: Begin AI Monitoring
+          - img [ref=e63]
+      - generic [ref=e65]: A vessel with this AIS ID is already registered. Please use a different AIS ID.
+    - generic [ref=e66]:
+      - heading "Demo Credentials" [level=3] [ref=e67]:
+        - img [ref=e68]
+        - text: Demo Credentials
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]: "AIS ID:"
+          - generic [ref=e73]: "123456789"
+        - generic [ref=e74]:
+          - generic [ref=e75]: "Boat ID:"
+          - generic [ref=e76]: VESSEL-001
+        - generic [ref=e77]:
+          - generic [ref=e78]: "Name:"
+          - generic [ref=e79]: Captain Smith
+        - generic [ref=e80]:
+          - generic [ref=e81]: "Phone:"
+          - generic [ref=e82]: +1-555-0101
+```

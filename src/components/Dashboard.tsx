@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Compass, Gauge, Clock, Satellite } from 'lucide-react';
+import { MapPin, Compass, Gauge, Clock, Satellite, Anchor, Shield } from 'lucide-react';
 import { BoatData } from '../App';
 
 interface DashboardProps {
@@ -27,71 +27,84 @@ const Dashboard: React.FC<DashboardProps> = ({ boatData }) => {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Live Vessel Tracking</h2>
-        <p className="text-blue-100">Real-time position and status monitoring</p>
+    <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-blue-50">
+      <div className="bg-gradient-to-r from-blue-600 to-sky-600 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-wide">LIVE VESSEL STATUS</h2>
+            <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest opacity-90">Sector 7 — Palk Strait Boundary</p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg border border-white/20">
+            <Anchor className="h-4 w-4 text-blue-100" />
+            <span className="text-xs font-mono font-bold text-white">{boatData.boatId}</span>
+          </div>
+        </div>
       </div>
 
       <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <MapPin className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <div className="text-sm text-gray-600 mb-1">Latitude</div>
-            <div className="font-mono text-lg font-semibold">{formatCoordinate(boatData.location.lat)}</div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="text-center p-5 bg-[#0ea5e9] rounded-2xl shadow-sm hover:shadow-md transition-all group">
+            <MapPin className="h-5 w-5 text-white mx-auto mb-2 opacity-90 group-hover:scale-110 transition-transform" />
+            <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mb-1">Latitude</div>
+            <div className="font-mono text-sm font-bold text-white tracking-tight">{formatCoordinate(boatData.location.lat)}°N</div>
           </div>
           
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <MapPin className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <div className="text-sm text-gray-600 mb-1">Longitude</div>
-            <div className="font-mono text-lg font-semibold">{formatCoordinate(boatData.location.lng)}</div>
+          <div className="text-center p-5 bg-[#0ea5e9] rounded-2xl shadow-sm hover:shadow-md transition-all group">
+            <MapPin className="h-5 w-5 text-white mx-auto mb-2 opacity-90 group-hover:scale-110 transition-transform" />
+            <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mb-1">Longitude</div>
+            <div className="font-mono text-sm font-bold text-white tracking-tight">{formatCoordinate(boatData.location.lng)}°E</div>
           </div>
           
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <Gauge className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <div className="text-sm text-gray-600 mb-1">Speed</div>
-            <div className="font-mono text-lg font-semibold">{boatData.speed.toFixed(1)} kts</div>
+          <div className="text-center p-5 bg-[#0ea5e9] rounded-2xl shadow-sm hover:shadow-md transition-all group">
+            <Gauge className="h-5 w-5 text-white mx-auto mb-2 opacity-90 group-hover:scale-110 transition-transform" />
+            <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mb-1">Speed</div>
+            <div className="font-mono text-sm font-bold text-white tracking-tight">{boatData.speed.toFixed(1)} <span className="text-[10px] opacity-70">KTS</span></div>
           </div>
           
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <Compass className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-            <div className="text-sm text-gray-600 mb-1">Heading</div>
-            <div className="font-mono text-lg font-semibold">{boatData.heading}°</div>
+          <div className="text-center p-5 bg-[#0ea5e9] rounded-2xl shadow-sm hover:shadow-md transition-all group">
+            <Compass className="h-5 w-5 text-white mx-auto mb-2 opacity-90 group-hover:scale-110 transition-transform" />
+            <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mb-1">Heading</div>
+            <div className="font-mono text-sm font-bold text-white tracking-tight">{boatData.heading}°</div>
           </div>
         </div>
 
-        <div className="border-t pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-gray-600">
-              <Clock className="h-4 w-4 mr-2" />
-              <span className="text-sm">Last Update: {formatTime(boatData.lastUpdate)}</span>
-            </div>
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-              boatData.status === 'safe' ? 'bg-green-100 text-green-800' :
-              boatData.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              Status: {boatData.status.toUpperCase()}
-            </div>
+        {/* System Status Bar */}
+        <div className="pt-5 border-t border-blue-50 flex items-center justify-between">
+          <div className="flex items-center text-slate-500">
+            <Clock className="h-4 w-4 mr-2 text-blue-400" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Last Sync: {formatTime(boatData.lastUpdate)}</span>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest border transition-all ${
+            boatData.status === 'safe' ? 'bg-green-50 text-green-600 border-green-100' :
+            boatData.status === 'warning' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+            'bg-red-50 text-red-600 border-red-100'
+          }`}>
+            <Shield className="h-3 w-3" />
+            {boatData.status.toUpperCase()}
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="font-semibold text-blue-900 mb-2">Simulated Map View</h3>
-          <div className="aspect-video bg-blue-100 rounded-lg flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-blue-300"></div>
-            <div className="relative z-10 text-center">
-              <div className="w-4 h-4 bg-red-500 rounded-full mx-auto mb-2 animate-pulse"></div>
-              <div className="text-sm text-blue-800 font-medium">Current Position</div>
-              <div className="text-xs text-blue-600 mt-1">
-                {formatCoordinate(boatData.location.lat)}, {formatCoordinate(boatData.location.lng)}
-              </div>
+        {/* Engine Architecture Info */}
+        <div className="mt-5 p-5 bg-blue-50 rounded-2xl border border-blue-100">
+          <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" /> AI Surveillance Stack
+          </h4>
+          <div className="grid grid-cols-2 gap-3 text-[10px] font-bold text-blue-900/60">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" /> 
+              <span>L1: GEOFENCE MONITOR</span>
             </div>
-            <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-medium">
-              Restricted Zone
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" /> 
+              <span>L2: KALMAN TRAJECTORY</span>
             </div>
-            <div className="absolute bottom-4 right-4 bg-green-400 text-green-900 px-2 py-1 rounded text-xs font-medium">
-              Safe Zone
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" /> 
+              <span>L3: RISK ENGINE</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" /> 
+              <span>L4: GEMINI RE-ANALYSIS</span>
             </div>
           </div>
         </div>

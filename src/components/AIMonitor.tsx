@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Brain, TrendingUp, AlertTriangle, Shield, Activity } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Brain, Shield, Activity, Navigation, Gauge, MapPin, Volume2, MessageSquare } from 'lucide-react';
 import { BoatData, Alert } from '../App';
+import { checkGeofence, type GeofenceResult, type AlertLevel } from '../engines/geofence';
+import { VesselTracker, type PredictedPoint } from '../engines/kalmanFilter';
+import { calculateRisk, type RiskAssessment } from '../engines/riskModel';
+import { generateAlertExplanation, getStaticAlert, type BilingualAlert } from '../engines/geminiLayer';
+import { useAudioAlert } from '../hooks/useAudioAlert';
+import Typewriter from './Typewriter';
 
 interface AIMonitorProps {
   boatData: BoatData | null;
@@ -8,227 +14,363 @@ interface AIMonitorProps {
   onStatusChange: (status: BoatData['status']) => void;
 }
 
-interface BehaviorAnalysis {
-  riskLevel: 'low' | 'medium' | 'high';
-  patterns: string[];
-  recommendation: string;
-  confidence: number;
-}
-
 const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange }) => {
-  const [analysis, setAnalysis] = useState<BehaviorAnalysis>({
-    riskLevel: 'low',
-    patterns: [],
-    recommendation: 'Normal operation',
-    confidence: 0
-  });
+  // Engine states
+  const [geofenceResult, setGeofenceResult] = useState<GeofenceResult | null>(null);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
+  const [trajectoryPrediction, setTrajectoryPrediction] = useState<ReturnType<VesselTracker['predictTrajectory']> | null>(null);
+  const [alertMessage, setAlertMessage] = useState<BilingualAlert | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [prohibitedZones] = useState([
-    { name: 'Marine Protected Area', lat: 37.7749, lng: -122.4194, radius: 0.01 },
-    { name: 'Spawning Ground', lat: 37.7849, lng: -122.4094, radius: 0.008 },
-    { name: 'Restricted Fishing Zone', lat: 37.7649, lng: -122.4294, radius: 0.012 }
-  ]);
 
-  useEffect(() => {
-    if (!boatData) return;
+  // Kalman tracker ref — persists across renders
+  const trackerRef = useRef<VesselTracker>(new VesselTracker());
 
-    const analyzeInterval = setInterval(() => {
-      setIsAnalyzing(true);
-      
-      // Simulate AI analysis delay
-      setTimeout(() => {
-        const newAnalysis = performBehaviorAnalysis(boatData);
-        setAnalysis(newAnalysis);
-        checkProhibitedZones(boatData);
-        setIsAnalyzing(false);
-      }, 1500);
-    }, 10000); // Analyze every 10 seconds
+  // Track last alert level to avoid duplicate alerts
+  const lastAlertLevelRef = useRef<AlertLevel>('safe');
 
-    return () => clearInterval(analyzeInterval);
-  }, [boatData]);
+  // Activate Audio Alerts Hook
+  useAudioAlert(boatData?.status || 'safe');
 
-  const performBehaviorAnalysis = (data: BoatData): BehaviorAnalysis => {
-    const patterns: string[] = [];
-    let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    let confidence = Math.random() * 0.3 + 0.7; // 70-100% confidence
+  /**
+   * CORE ENGINE PIPELINE — runs on every GPS update
+   * 1. Geofence check (deterministic)
+   * 2. Kalman filter update + trajectory prediction
+   * 3. Risk model scoring
+   * 4. Gemini explanation (only if alert level changes)
+   */
+  const runEnginePipeline = useCallback(async (data: BoatData) => {
+    setIsAnalyzing(true);
+    const position = { lat: data.location.lat, lng: data.location.lng };
+    const timestamp = data.location.timestamp || Date.now();
 
-    // Simulate AI pattern detection
-    if (data.speed > 15) {
-      patterns.push('High speed operation detected');
-      riskLevel = 'medium';
-    }
+    try {
+      // === LAYER 1: Deterministic Geofence ===
+      const geoResult = checkGeofence(position);
+      setGeofenceResult(geoResult);
 
-    if (data.speed < 2 && data.speed > 0) {
-      patterns.push('Slow drift pattern - possible fishing activity');
-      riskLevel = 'medium';
-    }
+      // === LAYER 2: Kalman Filter Trajectory ===
+      trackerRef.current.addMeasurement({ lat: position.lat, lng: position.lng, timestamp });
+      const trajectory = trackerRef.current.predictTrajectory();
+      setTrajectoryPrediction(trajectory);
 
-    // Random pattern simulation
-    const randomPatterns = [
-      'Circular movement pattern detected',
-      'Consistent heading maintained',
-      'Normal transit behavior',
-      'Irregular speed variations',
-      'Route deviation from planned course'
-    ];
-
-    if (Math.random() > 0.7) {
-      patterns.push(randomPatterns[Math.floor(Math.random() * randomPatterns.length)]);
-    }
-
-    // Simulate risk escalation
-    if (Math.random() > 0.85) {
-      riskLevel = 'high';
-      patterns.push('Potential prohibited zone approach');
-      confidence = Math.random() * 0.2 + 0.8; // 80-100% for high risk
-    }
-
-    const recommendation = getRiskRecommendation(riskLevel);
-
-    return { riskLevel, patterns, recommendation, confidence };
-  };
-
-  const getRiskRecommendation = (risk: 'low' | 'medium' | 'high'): string => {
-    switch (risk) {
-      case 'high':
-        return 'Immediate attention required - review current activity';
-      case 'medium':
-        return 'Monitor closely - verify operational compliance';
-      default:
-        return 'Continue normal operation - all systems nominal';
-    }
-  };
-
-  const checkProhibitedZones = (data: BoatData) => {
-    prohibitedZones.forEach(zone => {
-      const distance = calculateDistance(
-        data.location.lat,
-        data.location.lng,
-        zone.lat,
-        zone.lng
+      // === LAYER 3: Risk Model ===
+      const risk = calculateRisk(
+        data.aisId,
+        position,
+        data.speed,
+        data.heading,
+        trajectory.predictedPoints,
+        timestamp,
       );
+      setRiskAssessment(risk);
 
-      if (distance <= zone.radius) {
-        onAlert({
-          type: 'danger',
-          message: `PROHIBITED ZONE ENTRY: Vessel has entered ${zone.name}`,
-          zone: zone.name
-        });
-        onStatusChange('danger');
-      } else if (distance <= zone.radius * 1.5) {
-        onAlert({
-          type: 'warning',
-          message: `ZONE WARNING: Approaching ${zone.name} - maintain safe distance`,
-          zone: zone.name
-        });
-        onStatusChange('warning');
+      // === Determine final alert level (highest wins) ===
+      let finalAlertLevel: AlertLevel = risk.alertLevel;
+      if (geoResult.alertLevel === 'violation') {
+        finalAlertLevel = 'violation';
+      } else if (geoResult.alertLevel === 'high_risk' && finalAlertLevel !== 'violation') {
+        finalAlertLevel = 'high_risk';
       }
-    });
-  };
 
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c * 100; // Convert to degrees for zone comparison
-  };
+      // === Update boat status ===
+      if (finalAlertLevel === 'violation') {
+        onStatusChange('danger');
+      } else if (finalAlertLevel === 'high_risk') {
+        onStatusChange('warning');
+      } else if (finalAlertLevel === 'advisory') {
+        onStatusChange('warning');
+      } else {
+        onStatusChange('safe');
+      }
+
+      // === Trigger alerts only when level CHANGES or is critical ===
+      if (finalAlertLevel !== lastAlertLevelRef.current || finalAlertLevel === 'violation') {
+        lastAlertLevelRef.current = finalAlertLevel;
+
+        if (finalAlertLevel !== 'safe') {
+          // Fire immediate deterministic alert
+          onAlert({
+            type: finalAlertLevel === 'violation' ? 'danger' : finalAlertLevel === 'high_risk' ? 'danger' : 'warning',
+            message: geoResult.statusMessage || risk.riskFactors[0],
+            zone: 'IMBL - Palk Strait',
+          });
+
+          // === LAYER 4: Gemini for language (async, non-blocking) ===
+          generateAlertExplanation({
+            vesselId: data.aisId,
+            boatName: data.boatId,
+            fishermanName: data.fishermanName,
+            alertLevel: finalAlertLevel,
+            riskProbability: risk.probability,
+            distanceToIMBL: geoResult.distanceToIMBL,
+            speedKnots: data.speed,
+            heading: data.heading,
+            riskFactors: risk.riskFactors,
+            isViolation: geoResult.isInForbiddenZone,
+            timestamp,
+          }).then(setAlertMessage).catch(() => {
+            // Fallback to static
+            setAlertMessage(getStaticAlert(finalAlertLevel));
+          });
+        } else {
+          setAlertMessage(getStaticAlert('safe'));
+        }
+      }
+    } catch (error) {
+      console.error('Engine pipeline error:', error);
+      // Fallback: still try geofence at minimum
+      const geoFallback = checkGeofence(position);
+      setGeofenceResult(geoFallback);
+      if (geoFallback.isInForbiddenZone) {
+        onStatusChange('danger');
+        onAlert({ type: 'danger', message: geoFallback.statusMessage, zone: 'IMBL' });
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [onAlert, onStatusChange]);
+
+  // Run pipeline on boatData change (throttled to every update)
+  useEffect(() => {
+    if (!boatData || (boatData.location.lat === 0 && boatData.location.lng === 0)) return;
+    runEnginePipeline(boatData);
+  }, [boatData, runEnginePipeline]);
+
+  // === RENDER ===
 
   if (!boatData) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="text-center text-gray-500">
           <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>AI monitoring standby...</p>
+          <p className="font-semibold">AI Engine Standby</p>
+          <p className="text-sm mt-1">Kalman Filter • Risk Model • Geofence</p>
         </div>
       </div>
     );
   }
 
+  const riskPercent = riskAssessment ? Math.round(riskAssessment.probability * 100) : 0;
+  const riskColor = riskPercent > 80 ? 'red' : riskPercent > 50 ? 'yellow' : 'green';
+
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4 text-white">
+    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-50">
+      {/* Header */}
+      <div className={`p-5 border-b ${
+        geofenceResult?.alertLevel === 'violation' ? 'bg-red-50 border-red-100' :
+        geofenceResult?.alertLevel === 'high_risk' ? 'bg-orange-50 border-orange-100' :
+        geofenceResult?.alertLevel === 'advisory' ? 'bg-yellow-50 border-yellow-100' :
+        'bg-blue-600 border-blue-700'
+      }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Brain className="h-6 w-6 mr-2" />
-            <h3 className="text-lg font-semibold">AI Behavior Monitor</h3>
+            <div className={`p-2 rounded-lg ${
+              geofenceResult?.alertLevel === 'violation' ? 'bg-white' : 'bg-white/20'
+            }`}>
+              <Brain className={`h-6 w-6 ${
+                geofenceResult?.alertLevel === 'violation' ? 'text-red-500' : 'text-white'
+              }`} />
+            </div>
+            <div className="ml-3">
+              <h3 className={`text-lg font-bold tracking-wide uppercase italic ${
+                geofenceResult?.alertLevel === 'violation' ? 'text-red-900' :
+                geofenceResult?.alertLevel === 'high_risk' ? 'text-orange-900' :
+                geofenceResult?.alertLevel === 'advisory' ? 'text-yellow-900' :
+                'text-white'
+              }`}>AI BORDER ENGINE <span className={`text-[10px] not-italic font-mono ml-2 opacity-60 ${
+                geofenceResult?.alertLevel === 'violation' ? 'text-red-600' : 'text-blue-100'
+              }`}>v4.2</span></h3>
+              <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${
+                geofenceResult?.alertLevel === 'violation' ? 'text-red-600' :
+                geofenceResult?.alertLevel === 'high_risk' ? 'text-orange-600' :
+                geofenceResult?.alertLevel === 'advisory' ? 'text-yellow-600' :
+                'text-blue-100'
+              }`}>Deterministic Geofencing • Neural Risk Scoring</p>
+            </div>
           </div>
-          {isAnalyzing && (
-            <Activity className="h-5 w-5 animate-pulse" />
-          )}
+          <div className="flex items-center gap-3">
+            {isAnalyzing && <Activity className={`h-4 w-4 animate-pulse ${
+              geofenceResult?.alertLevel === 'violation' ? 'text-red-500' : 'text-white'
+            }`} />}
+            <div className={`px-4 py-2 rounded-full text-[10px] font-bold tracking-widest border shadow-sm ${
+              geofenceResult?.alertLevel === 'violation' ? 'bg-red-500 text-white border-red-400 animate-pulse' :
+              geofenceResult?.alertLevel === 'high_risk' ? 'bg-orange-500 text-white border-orange-400' :
+              geofenceResult?.alertLevel === 'advisory' ? 'bg-yellow-500 text-white border-yellow-400' :
+              'bg-white text-blue-600 border-white'
+            }`}>
+              {geofenceResult?.alertLevel?.replace('_', ' ') || 'SAFE'}
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Risk Probability Gauge */}
+        <div className="bg-[#0ea5e9] rounded-2xl p-5 shadow-sm text-white">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Gauge className="h-4 w-4 text-blue-100 mr-2" />
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-90">Boundary Risk Index</span>
+            </div>
+            <span className="text-2xl font-mono font-bold">
+              {riskPercent}<span className="text-sm ml-0.5 opacity-70">%</span>
+            </span>
+          </div>
+          <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden border border-white/10">
+            <div
+              className={`risk-progress-bar h-full transition-all duration-1000 ${
+                riskColor === 'red' ? 'bg-red-400' :
+                riskColor === 'yellow' ? 'bg-yellow-300' : 'bg-green-400'
+              }`}
+              style={{ '--risk-width': `${riskPercent}%` } as React.CSSProperties}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] font-bold text-blue-100 mt-3 uppercase tracking-wider opacity-80">
+            <span>Nominal</span>
+            <span className="text-yellow-200">Alert</span>
+            <span className="text-red-200 uppercase">Critical</span>
+          </div>
+        </div>
+
+        {/* IMBL Distance */}
+        <div className="flex items-center justify-between bg-blue-50 rounded-2xl p-5 border border-blue-100 shadow-sm transition-all hover:border-blue-200">
           <div className="flex items-center">
-            <TrendingUp className="h-5 w-5 text-gray-600 mr-2" />
-            <span className="font-medium text-gray-900">Risk Assessment</span>
+            <div className="bg-blue-100 p-2 rounded-lg mr-4">
+              <MapPin className="h-5 w-5 text-blue-600" />
+            </div>
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">Distance To Boundary</span>
           </div>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            analysis.riskLevel === 'low' ? 'bg-green-100 text-green-800' :
-            analysis.riskLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-red-100 text-red-800'
-          }`}>
-            {analysis.riskLevel.toUpperCase()} RISK
-          </div>
+          <span className="font-mono text-xl font-bold text-blue-700">
+            {geofenceResult
+              ? geofenceResult.distanceToIMBL < 1000
+                ? `${Math.round(geofenceResult.distanceToIMBL)}m`
+                : `${(geofenceResult.distanceToIMBL / 1000).toFixed(2)}km`
+              : 'OFFLINE'}
+          </span>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">AI Confidence</span>
-            <span className="text-sm font-bold text-gray-900">{(analysis.confidence * 100).toFixed(1)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${analysis.confidence * 100}%` }}
-            ></div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Shield className="h-4 w-4 mr-2" />
-            Detected Patterns
+        {/* Trajectory Prediction */}
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center mb-1">
+            <Navigation className="h-3 w-3 mr-2 text-blue-500" />
+            Predictive Pathing (Kalman)
           </h4>
-          {analysis.patterns.length > 0 ? (
-            <ul className="space-y-2">
-              {analysis.patterns.map((pattern, index) => (
-                <li key={index} className="flex items-start text-sm">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <span className="text-gray-700">{pattern}</span>
-                </li>
+          {trajectoryPrediction && trajectoryPrediction.predictedPoints.length > 0 ? (
+            <div className="grid grid-cols-1 gap-2">
+              {trajectoryPrediction.predictedPoints.map((pt: PredictedPoint, i: number) => (
+                <div key={i} className="flex items-center justify-between text-[11px] bg-white border border-slate-100 rounded-xl px-4 py-3 hover:border-blue-200 shadow-sm transition-all">
+                  <span className="text-blue-600 font-bold">+{pt.timeOffsetMs / 60000} MINS</span>
+                  <span className="font-mono text-slate-700 font-medium">{pt.lat.toFixed(5)}°N, {pt.lng.toFixed(5)}°E</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400 uppercase text-[9px]">Conf:</span>
+                    <span className={`font-bold ${pt.confidence > 0.6 ? 'text-green-600' : 'text-amber-600'}`}>
+                      {(pt.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
               ))}
-            </ul>
+              <div className="flex items-center justify-between text-[10px] text-slate-500 mt-2 px-2 font-bold uppercase tracking-widest opacity-70">
+                <span>Speed: {trajectoryPrediction.estimatedSpeedMps.toFixed(1)} m/s</span>
+                <span>Heading: {trajectoryPrediction.estimatedHeading.toFixed(0)}°</span>
+                <span>History: {trackerRef.current.getHistoryLength()} pts</span>
+              </div>
+            </div>
           ) : (
-            <p className="text-sm text-gray-500 italic">No unusual patterns detected</p>
+            <div className="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4">Awaiting dynamic movement for trajectory projection...</p>
+            </div>
           )}
         </div>
 
-        <div className="border-t pt-4">
-          <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            AI Recommendation
+        {/* Risk Factors */}
+        <div>
+          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center mb-4">
+            <Shield className="h-3 w-3 mr-2 text-indigo-500" />
+            Vulnerability Vectors
           </h4>
-          <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg">
-            {analysis.recommendation}
-          </p>
+          {riskAssessment && riskAssessment.riskFactors.length > 0 ? (
+            <div className="space-y-2">
+              {riskAssessment.riskFactors.map((factor, index) => (
+                <div key={index} className="flex items-start text-[11px] bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                  <div className={`w-2 h-2 rounded-full mt-1 mr-3 flex-shrink-0 ${
+                    riskPercent > 80 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 
+                    riskPercent > 50 ? 'bg-amber-500' : 'bg-blue-500'
+                  }`} />
+                  <span className="text-slate-700 font-semibold">{factor}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic leading-none">Scanning for behavioral anomalies...</p>
+            </div>
+          )}
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-yellow-800 mb-1">Prohibited Zones Active</p>
-              <p className="text-yellow-700">
-                {prohibitedZones.length} fishing restriction zones are being monitored
-              </p>
+        {/* AI Intelligence Briefing (Bilingual typewriter) */}
+        {alertMessage && (
+          <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-500 ${
+            geofenceResult?.alertLevel === 'violation' ? 'border-red-200 bg-red-50' :
+            geofenceResult?.alertLevel === 'high_risk' ? 'border-orange-200 bg-orange-50' :
+            'border-blue-200 bg-blue-50'
+          }`}>
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-xl flex-shrink-0 shadow-sm ${
+                geofenceResult?.alertLevel === 'violation' ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'
+              }`}>
+                {geofenceResult?.alertLevel === 'violation' ? <Volume2 className="h-5 w-5 animate-pulse" /> : <MessageSquare className="h-5 w-5" />}
+              </div>
+              <div className="space-y-4 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                    geofenceResult?.alertLevel === 'violation' ? 'bg-red-600 text-white' : 'bg-blue-700 text-white'
+                  }`}>
+                    {geofenceResult?.alertLevel === 'violation' ? 'IMMEDIATE THREAT' : 'AI INTELLIGENCE'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    {new Date().toLocaleTimeString()}
+                  </span>
+                </div>
+                
+                <div className="space-y-4">
+                  <Typewriter 
+                    text={alertMessage.english} 
+                    speed={20}
+                    className="text-sm font-bold text-slate-800 leading-relaxed tracking-tight"
+                  />
+                  <div className={`h-px w-1/4 ${
+                    geofenceResult?.alertLevel === 'violation' ? 'bg-red-200' : 'bg-blue-200'
+                  }`} />
+                  <Typewriter 
+                    text={alertMessage.tamil} 
+                    speed={25}
+                    className={`text-sm font-bold leading-relaxed font-tamil ${
+                      geofenceResult?.alertLevel === 'violation' ? 'text-red-700' : 'text-blue-700'
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* Engine Status Terminal */}
+        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-wrap gap-x-5 gap-y-2 text-[9px] font-mono text-slate-500 font-bold tracking-tight shadow-inner">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${geofenceResult ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="uppercase">GEOFENCE: {geofenceResult ? 'ONLINE' : 'ERROR'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${trajectoryPrediction?.isStable ? 'bg-green-500' : 'bg-blue-500'}`} />
+            <span className="uppercase">KALMAN: {trajectoryPrediction?.isStable ? 'STABLE' : 'CALIBRATING'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+            <span className="uppercase">RISK_MDL: {riskAssessment ? `${riskPercent}%` : 'PENDING'}</span>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <div className="w-1.5 h-1.5 bg-blue-500 animate-pulse rounded-full" />
+            <span className="uppercase text-blue-600">GEMINI_V4: REAL-TIME</span>
           </div>
         </div>
       </div>
