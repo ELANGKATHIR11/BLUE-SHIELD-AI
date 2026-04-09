@@ -1,0 +1,10 @@
+
+> vite-react-typescript-starter@0.0.0 lint
+> eslint .
+
+
+F:\BLUE-SHIELD-AI\finale\project\src\components\AlertSystem.tsx
+  2:31  error  'XCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+

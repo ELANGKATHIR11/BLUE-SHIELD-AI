@@ -51,8 +51,13 @@
 }
 
 @keyframes bg-pulse {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* Risk progress bar – width driven by --risk-width CSS custom property */
@@ -72,5 +77,38 @@
 }
 
 /* Ensure Leaflet controls always render above everything */
-.leaflet-control-container { z-index: 1000 !important; }
-.leaflet-top, .leaflet-bottom { z-index: 1000 !important; }
+.leaflet-control-container {
+  z-index: 1000 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000 !important;
+}
+
+/* Override Tailwind image reset for Leaflet tiles */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Dynamic width utility using CSS variables to avoid inline style lint issues */
+.width-var {
+  width: var(--width, 0%);
+}
+
+.max-h-var {
+  max-height: var(--max-h, none);
+}
+
+.text-shadow-cluster {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.landmark-label-inner {
+  font-size: 10px;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}

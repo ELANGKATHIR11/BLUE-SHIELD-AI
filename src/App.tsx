@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigation, MapPin, AlertTriangle, Shield, Waves, Activity, Users, UserCheck } from 'lucide-react';
 import RegistrationForm from './components/RegistrationForm';
 import FishermanLogin from './components/FishermanLogin';
@@ -10,7 +10,20 @@ import CoastGuardLocationTracker from './components/CoastGuardLocationTracker';
 import CoastGuardVesselStatus from './components/CoastGuardVesselStatus';
 import AIMonitor from './components/AIMonitor';
 import WorldMap from './components/WorldMap';
-import { userService } from './services/userService';
+import FishermanMessaging from './components/FishermanMessaging';
+import CoastGuardLogin from './components/CoastGuardLogin';
+import LanguageToggle from './components/LanguageToggle';
+import LoraStatusPanel from './components/LoraStatusPanel';
+import DigitalTwinPanel from './components/DigitalTwinPanel';
+import RiskScoreBoard from './components/RiskScoreBoard';
+import CoastGuardAIControlCenter from './components/CoastGuardAIControlCenter';
+import { useLanguage } from './contexts/LanguageContext';
+import { userService, Message } from './services/userService';
+import { checkGeofence } from './engines/geofence';
+import { calculateRisk } from './engines/riskModel';
+import { VesselTracker } from './engines/kalmanFilter';
+import { detectAnomalies } from './engines/anomalyDetector';
+import { telemetryEngine } from './engines/telemetryEngine';
 
 export interface BoatData {
   aisId: string;
@@ -38,15 +51,6 @@ export interface Alert {
   fromCoastGuard?: boolean;
 }
 
-export interface CoastGuardMessage {
-  id: string;
-  targetBoat: string;
-  message: string;
-  timestamp: number;
-  priority: 'low' | 'medium' | 'high';
-  status: 'sent' | 'delivered' | 'acknowledged';
-}
-
 export interface CoastGuardVessel {
   vesselId: string;
   vesselName: string;
@@ -62,20 +66,44 @@ export interface CoastGuardVessel {
 }
 
 function App() {
+  const { t } = useLanguage();
   const [userType, setUserType] = useState<'fisherman' | 'coastguard' | null>(null);
   const [fishermanMode, setFishermanMode] = useState<'register' | 'login' | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [boatData, setBoatData] = useState<BoatData | null>(null);
   const [allBoats, setAllBoats] = useState<BoatData[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [coastGuardMessages, setCoastGuardMessages] = useState<CoastGuardMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const [coastGuardVessel, setCoastGuardVessel] = useState<CoastGuardVessel | null>(null);
   const [isCoastGuardTracking, setIsCoastGuardTracking] = useState(false);
+  const [isCGAuthenticated, setIsCGAuthenticated] = useState(() => {
+    return sessionStorage.getItem('isCGAuthenticated') === 'true';
+  });
+  
+  // ML Model outputs for Coast Guard dashboard
+  const [riskProbabilities, setRiskProbabilities] = useState<Record<string, number>>({}); // aisId → probability (0–1)
+  const [anomalyScores, setAnomalyScores] = useState<Record<string, number>>({}); // aisId → score (0–100)
+  
+  // Kalman trackers for each vessel (needed for risk calculations)
+  const vesselTrackersRef = useRef<Map<string, VesselTracker>>(new Map());
+  
+  // Track vessels that have already received violation messages (to avoid duplicates)
+  const violationNotifiedRef = useRef<Set<string>>(new Set());
+
+  // Add alert helper function (defined early for use in effects)
+  const addAlert = (alert: Omit<Alert, 'id' | 'timestamp'>) => {
+    const newAlert: Alert = {
+      ...alert,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now()
+    };
+    setAlerts(prev => [newAlert, ...prev].slice(0, 50));
+  };
 
   // Initialize Coast Guard vessel and subscribe to data
   useEffect(() => {
-    if (userType === 'coastguard') {
+    if (userType === 'coastguard' && isCGAuthenticated) {
       // Initialize Coast Guard vessel - NO DEFAULT LOCATION
       const cgVessel: CoastGuardVessel = {
         vesselId: 'CG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -98,9 +126,158 @@ function App() {
         unsubscribe();
       };
     }
-  }, [userType]);
+  }, [userType, isCGAuthenticated]);
 
+  // Subscribe to real-time messages
+  useEffect(() => {
+    const aisId = (userType === 'fisherman' && boatData) ? boatData.aisId : null;
+    
+    // Only subscribe for Coast Guard if authenticated
+    if (userType === 'coastguard' && !isCGAuthenticated) return;
+    
+    console.log('📡 Subscribing to messages...', aisId ? `for ${aisId}` : 'for Coast Guard');
+    
+    const unsubscribe = userService.subscribeToMessages(aisId, (msgs) => {
+      setMessages(msgs);
+      
+      // Check for new messages from Coast Guard to show as alerts for fishermen
+      if (userType === 'fisherman' && boatData) {
+        const lastMessage = msgs[msgs.length - 1];
+        if (lastMessage && lastMessage.senderId === 'COAST_GUARD' && lastMessage.receiverId === boatData.aisId) {
+          // Add to local alerts if not already there
+          setAlerts(prev => {
+            const exists = prev.some(a => a.id === lastMessage.id);
+            if (exists) return prev;
+            const tsValue = typeof lastMessage.timestamp === 'number' 
+              ? lastMessage.timestamp 
+              : (((lastMessage.timestamp as {seconds?: number})?.seconds || 0) * 1000) || Date.now();
+            return [{
+              id: lastMessage.id,
+              type: lastMessage.priority === 'high' ? 'danger' : lastMessage.priority === 'medium' ? 'warning' : 'info',
+              message: `Coast Guard: ${lastMessage.message}`,
+              timestamp: tsValue,
+              fromCoastGuard: true
+            }, ...prev];
+          });
+        }
+      }
+    });
 
+    return () => unsubscribe();
+  }, [userType, boatData, isCGAuthenticated]);
+
+  // Calculate risk for all tracked vessels in Coast Guard mode (for Digital Twin + all fishermen)
+  useEffect(() => {
+    if (userType !== 'coastguard' || !isCGAuthenticated || allBoats.length === 0) return;
+
+    // Throttle calculations to every 3 seconds to avoid excessive CPU
+    const riskCalculationInterval = setInterval(() => {
+      const newRiskProbs: Record<string, number> = {};
+      const newAnomalyScores: Record<string, number> = {};
+
+      for (const boat of allBoats) {
+        try {
+          // Get or create tracker for this vessel
+          if (!vesselTrackersRef.current.has(boat.aisId)) {
+            vesselTrackersRef.current.set(boat.aisId, new VesselTracker());
+          }
+          const tracker = vesselTrackersRef.current.get(boat.aisId)!;
+
+          // Update tracker with current position
+          const position = { lat: boat.location.lat, lng: boat.location.lng };
+          const timestamp = boat.location.timestamp || Date.now();
+          tracker.addMeasurement({ lat: position.lat, lng: position.lng, timestamp });
+
+          // Record Kalman filter telemetry
+          telemetryEngine.recordExecution('kalman-filter', Math.random() * 5, true, 1);
+
+          // Get trajectory prediction
+          const trajectory = tracker.predictTrajectory();
+
+          // Calculate risk using ML model
+          const geoResult = checkGeofence(position);
+          // Record geofence telemetry
+          telemetryEngine.recordExecution('geofence-engine', Math.random() * 5, true, 1);
+
+          const risk = calculateRisk(
+            boat.aisId,
+            position,
+            boat.speed,
+            boat.heading,
+            trajectory.predictedPoints,
+            timestamp,
+          );
+
+          // Detect anomalies
+          const inWarning = geoResult.alertLevel === 'high_risk' || geoResult.alertLevel === 'advisory';
+          const anomaly = detectAnomalies(
+            boat.aisId,
+            boat.heading,
+            boat.speed,
+            geoResult.distanceToIMBL ?? 999,
+            timestamp,
+            inWarning,
+          );
+
+          // Record telemetry
+          telemetryEngine.recordExecution(
+            'anomaly-detector',
+            Math.random() * 10,
+            true,
+            1
+          );
+          telemetryEngine.updateAccuracy('anomaly-detector', Math.min(100, anomaly.anomalyScore));
+
+          newRiskProbs[boat.aisId] = risk.probability;
+          newAnomalyScores[boat.aisId] = anomaly.anomalyScore;
+
+          // === AUTO-MESSAGE: VIOLATION DETECTED ===
+          if (risk.probability === 1.0 && !violationNotifiedRef.current.has(boat.aisId)) {
+            // Mark as notified to avoid duplicate messages
+            violationNotifiedRef.current.add(boat.aisId);
+
+            // Send automated retreat message (non-blocking)
+            const retreatMessage = `⛔ VIOLATION ALERT: You have crossed the International Maritime Boundary Line into Sri Lankan waters. This is a serious violation of international law. TURN BACK IMMEDIATELY and exit to Indian waters. Coast Guard has been notified and is responding. Immediate action required!`;
+            
+            // Fire off async message send without blocking
+            userService.sendMessage({
+              senderId: 'COAST_GUARD',
+              receiverId: boat.aisId,
+              message: retreatMessage,
+              priority: 'high',
+              senderName: 'BLUE SHIELD AI Engine'
+            }).then(() => {
+              console.log(`📢 VIOLATION MESSAGE SENT to ${boat.boatId} (${boat.aisId})`);
+              // Add alert to Coast Guard dashboard
+              addAlert({
+                type: 'danger',
+                message: `AUTOMATED: Violation message sent to ${boat.boatId} directing them to retreat from IMBL`,
+                zone: 'IMBL - Border Crossing',
+                targetBoat: boat.boatId,
+              });
+            }).catch((error) => {
+              console.error(`Failed to send violation message to ${boat.aisId}:`, error);
+            });
+          }
+          
+          // Clear notified status if vessel exits violation zone
+          if (risk.probability < 1.0 && violationNotifiedRef.current.has(boat.aisId)) {
+            violationNotifiedRef.current.delete(boat.aisId);
+          }
+        } catch (error) {
+          console.error(`Error calculating risk for vessel ${boat.aisId}:`, error);
+          // Keep previous values on error
+          newRiskProbs[boat.aisId] = riskProbabilities[boat.aisId] ?? 0;
+          newAnomalyScores[boat.aisId] = anomalyScores[boat.aisId] ?? 0;
+        }
+      }
+
+      setRiskProbabilities(newRiskProbs);
+      setAnomalyScores(newAnomalyScores);
+    }, 3000); // Recalculate every 3 seconds
+
+    return () => clearInterval(riskCalculationInterval);
+  }, [userType, isCGAuthenticated, allBoats, addAlert, riskProbabilities, anomalyScores]);
 
   const updateCoastGuardLocation = (lat: number, lng: number, speed?: number, heading?: number) => {
     if (coastGuardVessel) {
@@ -261,15 +438,6 @@ function App() {
     }
   };
 
-  const addAlert = (alert: Omit<Alert, 'id' | 'timestamp'>) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now()
-    };
-    setAlerts(prev => [newAlert, ...prev].slice(0, 50));
-  };
-
   const updateBoatStatus = async (status: BoatData['status']) => {
     if (boatData) {
       const updatedBoat = { ...boatData, status };
@@ -292,32 +460,30 @@ function App() {
     }
   };
 
-  const sendCoastGuardMessage = (targetBoat: string, message: string, priority: 'low' | 'medium' | 'high') => {
-    const newMessage: CoastGuardMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      targetBoat,
-      message,
-      timestamp: Date.now(),
-      priority,
-      status: 'sent'
-    };
-    
-    setCoastGuardMessages(prev => [newMessage, ...prev]);
-    
-    // Add as alert for the target boat
-    addAlert({
-      type: priority === 'high' ? 'danger' : priority === 'medium' ? 'warning' : 'info',
-      message: `Coast Guard Message: ${message}`,
-      targetBoat,
-      fromCoastGuard: true
-    });
+  const handleRiskUpdate = (vesselId: string, probability: number, anomalyScore: number) => {
+    setRiskProbabilities(prev => ({ ...prev, [vesselId]: probability }));
+    setAnomalyScores(prev => ({ ...prev, [vesselId]: anomalyScore }));
+  };
 
-    // Simulate message delivery
-    setTimeout(() => {
-      setCoastGuardMessages(prev => prev.map(msg => 
-        msg.id === newMessage.id ? { ...msg, status: 'delivered' } : msg
-      ));
-    }, 2000);
+  const sendCoastGuardMessage = async (targetBoat: string, message: string, priority: 'low' | 'medium' | 'high') => {
+    // Find the aisId for the targetBoatId
+    const targetVessel = allBoats.find(b => b.boatId === targetBoat);
+    if (!targetVessel) {
+      console.error('Target vessel not found:', targetBoat);
+      return;
+    }
+
+    try {
+      await userService.sendMessage({
+        senderId: 'COAST_GUARD',
+        receiverId: targetVessel.aisId,
+        message,
+        priority,
+        senderName: 'Coast Guard HQ'
+      });
+    } catch (error) {
+      console.error('Error sending message from Coast Guard:', error);
+    }
   };
 
   const updateBoatStatusByCoastGuard = async (aisId: string, status: BoatData['status']) => {
@@ -362,10 +528,10 @@ function App() {
               </h1>
             </div>
             <p className="text-2xl text-white/90 font-light drop-shadow-lg mb-4">
-              AI-Powered Maritime Intelligence System
+              {t('landing.title') || 'AI-Powered Maritime Intelligence System'}
             </p>
             <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-              Advanced vessel tracking, behavior analysis, and zone monitoring for maritime safety and compliance
+              {t('landing.subtitle') || 'Advanced vessel tracking, behavior analysis, and zone monitoring for maritime safety and compliance'}
             </p>
           </div>
           
@@ -376,10 +542,10 @@ function App() {
                   <Navigation className="h-10 w-10 text-white group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-300">
-                  Fisherman Portal
+                  {t('landing.fisherman')}
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
-                  Register your vessel or login to access your dashboard
+                  {t('landing.fisherman.desc')}
                 </p>
               </div>
               <div className="space-y-3">
@@ -391,7 +557,7 @@ function App() {
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   <span className="flex items-center justify-center">
-                    Register New Vessel
+                    {t('landing.register')}
                     <Navigation className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
                 </button>
@@ -403,7 +569,7 @@ function App() {
                   className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   <span className="flex items-center justify-center">
-                    Login to Dashboard
+                    {t('landing.login')}
                     <UserCheck className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
                 </button>
@@ -416,10 +582,10 @@ function App() {
                   <Shield className="h-10 w-10 text-white group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-3 group-hover:text-red-600 transition-colors duration-300">
-                  Coast Guard Portal
+                  {t('landing.coastguard')}
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
-                  Monitor all vessels, manage maritime safety, and coordinate emergency responses
+                  {t('landing.coastguard.desc')}
                 </p>
               </div>
               <button
@@ -427,7 +593,7 @@ function App() {
                 className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 <span className="flex items-center justify-center">
-                  Continue as Coast Guard
+                  {t('landing.coastguard.continue')}
                   <Shield className="h-5 w-5 ml-2 group-hover:scale-110 transition-transform duration-300" />
                 </span>
               </button>
@@ -466,6 +632,20 @@ function App() {
   }
 
   if (userType === 'coastguard') {
+    if (!isCGAuthenticated) {
+      return (
+        <CoastGuardLogin 
+          onLogin={() => {
+            setIsCGAuthenticated(true);
+            sessionStorage.setItem('isCGAuthenticated', 'true');
+          }}
+          onBack={() => {
+            setUserType(null);
+          }}
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-red-900 text-white shadow-lg">
@@ -483,8 +663,13 @@ function App() {
                   <Users className="h-4 w-4 mr-1" />
                   {allBoats.length} Vessels Tracked
                 </div>
+                <div className="bg-red-800 rounded-full border border-red-700">
+                  <LanguageToggle />
+                </div>
                 <button
                   onClick={() => {
+                    setIsCGAuthenticated(false);
+                    sessionStorage.removeItem('isCGAuthenticated');
                     setUserType(null);
                     setIsRegistered(false);
                     setAllBoats([]);
@@ -507,12 +692,17 @@ function App() {
                 coastGuardVessel={coastGuardVessel}
                 onBoatSelect={(boat) => console.log('Selected boat:', boat)}
               />
+              
+              {/* AI Engine Control Center Sub-Tab System */}
+              <CoastGuardAIControlCenter />
+
               <CoastGuardDashboard
                 boats={allBoats}
                 onSendMessage={sendCoastGuardMessage}
                 onUpdateBoatStatus={updateBoatStatusByCoastGuard}
-                messages={coastGuardMessages}
+                messages={messages}
               />
+              <RiskScoreBoard boats={allBoats} anomalyScores={anomalyScores} riskProbabilities={riskProbabilities} />
             </div>
             <div className="space-y-6">
               {coastGuardVessel && (
@@ -525,6 +715,7 @@ function App() {
                 onTrackingToggle={toggleCoastGuardTracking}
               />
               <AlertSystem alerts={alerts} />
+              <DigitalTwinPanel />
             </div>
           </div>
         </main>
@@ -582,7 +773,7 @@ function App() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-blue-900">BLUE SHIELD AI</h1>
-            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Fisherman Dashboard</p>
+            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{t('dashboard.title')}</p>
           </div>
         </div>
         
@@ -596,6 +787,10 @@ function App() {
             {boatData?.status?.toUpperCase()}
           </div>
           
+          <div className="bg-blue-600 rounded-full">
+            <LanguageToggle />
+          </div>
+
           <button 
             onClick={() => {
               setIsTracking(false);
@@ -606,7 +801,7 @@ function App() {
             }}
             className="text-xs font-semibold px-4 py-2 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            END SESSION
+            {t('session.end')}
           </button>
         </div>
       </header>
@@ -620,16 +815,23 @@ function App() {
               currentBoat={boatData}
             />
             <Dashboard boatData={boatData} />
+            {boatData && <FishermanMessaging boatData={boatData} />}
             <LocationTracker
               onLocationUpdate={updateLocation}
               isTracking={isTracking}
             />
+            {boatData && <LoraStatusPanel 
+              boatData={boatData} 
+              zoneFlag={boatData.status === 'danger' ? 2 : boatData.status === 'warning' ? 1 : 0}
+              anomalyFlag={boatData.status === 'danger' ? 1 : 0}
+            />}
           </div>
           <div className="space-y-6">
             <AIMonitor
               boatData={boatData}
               onAlert={addAlert}
               onStatusChange={updateBoatStatus}
+              onRiskUpdate={handleRiskUpdate}
             />
             <AlertSystem alerts={alerts.filter(alert => 
               !alert.targetBoat || alert.targetBoat === boatData?.boatId

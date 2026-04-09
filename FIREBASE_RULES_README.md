@@ -11,7 +11,7 @@ This document contains the security rules for your maritime safety application's
 
 ### Option 1: Firebase Console (Recommended for beginners)
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: `maritime-28f36`
+2. Select your project: `blue-shield-live-101`
 3. Navigate to **Firestore Database** → **Rules**
 4. Copy the contents of `firestore.rules` and paste them
 5. Click **Publish**

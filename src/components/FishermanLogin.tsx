@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Ship, Radio, ArrowRight, AlertCircle, Activity, UserCheck, Lock } from 'lucide-react';
+import { Ship, Radio, ArrowRight, AlertCircle, Activity, UserCheck, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { userService } from '../services/userService';
 
 interface FishermanLoginProps {
@@ -8,6 +9,7 @@ interface FishermanLoginProps {
 }
 
 const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
+  const { t } = useLanguage();
   const [aisId, setAisId] = useState('');
   const [boatId, setBoatId] = useState('');
   const [fishermanName, setFishermanName] = useState('');
@@ -21,25 +23,25 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
     const newErrors: { aisId?: string; boatId?: string; fishermanName?: string; contactInfo?: string; general?: string } = {};
     
     if (!aisId.trim()) {
-      newErrors.aisId = 'AIS Signal ID is required';
+      newErrors.aisId = t('form.ais_id.required');
     } else if (!/^\d{9}$/.test(aisId.trim())) {
-      newErrors.aisId = 'AIS ID must be exactly 9 digits';
+      newErrors.aisId = t('form.ais_id.error');
     }
 
     if (!boatId.trim()) {
-      newErrors.boatId = 'Boat ID is required';
+      newErrors.boatId = t('form.boat_id.required');
     } else if (boatId.trim().length < 3) {
-      newErrors.boatId = 'Boat ID must be at least 3 characters';
+      newErrors.boatId = t('form.boat_id.error');
     }
 
     if (!fishermanName.trim()) {
-      newErrors.fishermanName = 'Captain/Fisherman name is required';
+      newErrors.fishermanName = t('form.fisherman_name.required');
     }
 
     if (!contactInfo.trim()) {
-      newErrors.contactInfo = 'Contact information is required';
+      newErrors.contactInfo = t('form.contact_phone.required');
     } else if (!/^[+]?[1-9][\d]{0,15}$/.test(contactInfo.trim().replace(/[-\s]/g, ''))) {
-      newErrors.contactInfo = 'Please enter a valid phone number';
+      newErrors.contactInfo = t('form.contact_phone.error');
     }
 
     setErrors(newErrors);
@@ -59,7 +61,7 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
         
         if (!userDetails) {
           setSubmitStatus('error');
-          setErrors({ general: 'No vessel found with this AIS ID. Please register first.' });
+          setErrors({ general: t('login.no_vessel') });
           return;
         }
 
@@ -68,12 +70,12 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
             userDetails.fishermanName !== fishermanName.trim() || 
             userDetails.contactInfo !== contactInfo.trim()) {
           setSubmitStatus('error');
-          setErrors({ general: 'Vessel details do not match. Please check your information.' });
+          setErrors({ general: t('login.mismatch') });
           return;
         }
 
         setSubmitStatus('success');
-        setStatusMessage('Login successful! Loading your vessel data...');
+        setStatusMessage(t('login.success'));
 
         // Call the login function with verified details
         setTimeout(() => {
@@ -88,7 +90,7 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
       } catch (error) {
         console.error('Login error:', error);
         setSubmitStatus('error');
-        setErrors({ general: 'Login failed. Please check your connection and try again.' });
+        setErrors({ general: t('login.error') });
       } finally {
         setIsSubmitting(false);
       }
@@ -103,23 +105,23 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
             <UserCheck className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            Vessel Login
+            {t('login.title')}
           </h2>
-          <p className="text-gray-600 leading-relaxed">Enter your registered vessel credentials to access your dashboard</p>
+          <p className="text-gray-600 leading-relaxed">{t('login.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="aisId" className="block text-sm font-medium text-gray-700 mb-2">
               <Radio className="h-4 w-4 inline mr-2" />
-              AIS Signal ID
+              {t('form.ais_id')}
             </label>
             <input
               type="text"
               id="aisId"
               value={aisId}
               onChange={(e) => setAisId(e.target.value)}
-              placeholder="Enter your 9-digit AIS ID"
+              placeholder={t('form.ais_id.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.aisId ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -136,14 +138,14 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
           <div>
             <label htmlFor="boatId" className="block text-sm font-medium text-gray-700 mb-2">
               <Ship className="h-4 w-4 inline mr-2" />
-              Registered Boat ID
+              {t('form.boat_id')}
             </label>
             <input
               type="text"
               id="boatId"
               value={boatId}
               onChange={(e) => setBoatId(e.target.value)}
-              placeholder="Enter your boat registration ID"
+              placeholder={t('form.boat_id.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.boatId ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -159,14 +161,14 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
           <div>
             <label htmlFor="fishermanName" className="block text-sm font-medium text-gray-700 mb-2">
               <UserCheck className="h-4 w-4 inline mr-2" />
-              Captain/Fisherman Name
+              {t('form.fisherman_name')}
             </label>
             <input
               type="text"
               id="fishermanName"
               value={fishermanName}
               onChange={(e) => setFishermanName(e.target.value)}
-              placeholder="Enter your registered name"
+              placeholder={t('form.fisherman_name.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.fishermanName ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -182,14 +184,14 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
           <div>
             <label htmlFor="contactInfo" className="block text-sm font-medium text-gray-700 mb-2">
               <Radio className="h-4 w-4 inline mr-2" />
-              Contact Phone Number
+              {t('form.contact_phone')}
             </label>
             <input
               type="tel"
               id="contactInfo"
               value={contactInfo}
               onChange={(e) => setContactInfo(e.target.value)}
-              placeholder="Enter your registered phone number"
+              placeholder={t('form.contact_phone.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.contactInfo ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -222,17 +224,17 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
           >
             {isSubmitting ? (
               <span className="flex items-center">
-                <Activity className="h-4 w-4 mr-2 animate-spin" />
-                Verifying...
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t('login.logging_in')}
               </span>
             ) : submitStatus === 'success' ? (
               <span className="flex items-center">
-                <Lock className="h-4 w-4 mr-2" />
-                Login Successful!
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {t('login.success')}
               </span>
             ) : (
               <span className="flex items-center">
-                Access Dashboard
+                {t('login.button')}
                 <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
             )}

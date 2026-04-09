@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Brain, Shield, Activity, Navigation, Gauge, MapPin, Volume2, MessageSquare } from 'lucide-react';
+import { Brain, Shield, Activity, Navigation, Gauge, MapPin, Volume2, MessageSquare, AlertTriangle } from 'lucide-react';
 import { BoatData, Alert } from '../App';
 import { checkGeofence, type GeofenceResult, type AlertLevel } from '../engines/geofence';
 import { VesselTracker, type PredictedPoint } from '../engines/kalmanFilter';
 import { calculateRisk, type RiskAssessment } from '../engines/riskModel';
 import { generateAlertExplanation, getStaticAlert, type BilingualAlert } from '../engines/geminiLayer';
+import { detectAnomalies, type AnomalyState } from '../engines/anomalyDetector';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAudioAlert } from '../hooks/useAudioAlert';
 import Typewriter from './Typewriter';
 
@@ -12,15 +14,18 @@ interface AIMonitorProps {
   boatData: BoatData | null;
   onAlert: (alert: Omit<Alert, 'id' | 'timestamp'>) => void;
   onStatusChange: (status: BoatData['status']) => void;
+  onRiskUpdate?: (vesselId: string, probability: number, anomalyScore: number) => void;
 }
 
-const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange }) => {
+const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange, onRiskUpdate }) => {
   // Engine states
   const [geofenceResult, setGeofenceResult] = useState<GeofenceResult | null>(null);
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
   const [trajectoryPrediction, setTrajectoryPrediction] = useState<ReturnType<VesselTracker['predictTrajectory']> | null>(null);
   const [alertMessage, setAlertMessage] = useState<BilingualAlert | null>(null);
+  const [anomalyState, setAnomalyState] = useState<AnomalyState | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { lang } = useLanguage();
 
   // Kalman tracker ref — persists across renders
   const trackerRef = useRef<VesselTracker>(new VesselTracker());
@@ -63,6 +68,21 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
         timestamp,
       );
       setRiskAssessment(risk);
+
+      // === LAYER 5: Anomaly Detection ===
+      const inWarning = geoResult.alertLevel === 'high_risk' || geoResult.alertLevel === 'advisory';
+      const anomaly = detectAnomalies(
+        data.aisId,
+        data.heading,
+        data.speed,
+        geoResult.distanceToIMBL ?? 999,
+        timestamp,
+        inWarning,
+      );
+      setAnomalyState(anomaly);
+
+      // === Emit risk update for Coast Guard dashboard ===
+      onRiskUpdate?.(data.aisId, risk.probability, anomaly.anomalyScore);
 
       // === Determine final alert level (highest wins) ===
       let finalAlertLevel: AlertLevel = risk.alertLevel;
@@ -354,6 +374,48 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
           </div>
         )}
 
+
+        {/* === LAYER 5: Anomaly Detection Panel === */}
+        {anomalyState && (
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+                L5: ANOMALY DETECTION
+              </h4>
+              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${
+                anomalyState.anomalyScore >= 60 ? 'bg-red-100 text-red-700' :
+                anomalyState.anomalyScore >= 30 ? 'bg-orange-100 text-orange-700' :
+                'bg-green-100 text-green-700'
+              }`}>
+                Score: {anomalyState.anomalyScore}/100
+              </div>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2 mb-3 overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-700 ${
+                anomalyState.anomalyScore >= 60 ? 'bg-red-500' :
+                anomalyState.anomalyScore >= 30 ? 'bg-orange-400' : 'bg-green-400'
+              }`} style={{ width: `${anomalyState.anomalyScore}%` }} />
+            </div>
+            {anomalyState.lastAnomalies.length === 0 ? (
+              <p className="text-[10px] text-green-600 font-bold">✓ No anomalies detected — behavior nominal</p>
+            ) : (
+              <div className="space-y-2">
+                {anomalyState.lastAnomalies.map((ev, idx) => (
+                  <div key={idx} className={`rounded-lg px-3 py-2 text-[10px] font-bold border ${
+                    ev.severity === 'high' ? 'bg-red-50 border-red-200 text-red-700' :
+                    ev.severity === 'medium' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                    'bg-yellow-50 border-yellow-200 text-yellow-700'
+                  }`}>
+                    <div className="uppercase tracking-wider">{ev.type.replace('_', ' ')} — {ev.severity.toUpperCase()}</div>
+                    <div className="mt-0.5 font-normal opacity-80">{lang === 'ta' ? ev.tamilMessage : ev.message}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Engine Status Terminal */}
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-wrap gap-x-5 gap-y-2 text-[9px] font-mono text-slate-500 font-bold tracking-tight shadow-inner">
           <div className="flex items-center gap-2">
@@ -367,6 +429,10 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
             <span className="uppercase">RISK_MDL: {riskAssessment ? `${riskPercent}%` : 'PENDING'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${anomalyState ? 'bg-orange-500' : 'bg-slate-300'}`} />
+            <span className="uppercase">ANOMALY: {anomalyState ? `${anomalyState.anomalyScore}% RISK` : 'STANDBY'}</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <div className="w-1.5 h-1.5 bg-blue-500 animate-pulse rounded-full" />

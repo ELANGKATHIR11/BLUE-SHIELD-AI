@@ -18,7 +18,7 @@
  */
 
 import { GeoPoint, IMBL_LINE } from '../data/palkStraitBoundary';
-import { distanceToIMBL, bearing, trajectoryIntersectsIMBL, type AlertLevel } from './geofence';
+import { distanceToIMBL, bearing, trajectoryIntersectsIMBL, type AlertLevel, checkGeofence } from './geofence';
 import type { PredictedPoint } from './kalmanFilter';
 
 /** Risk assessment result */
@@ -49,21 +49,30 @@ export interface RiskFeatures {
  * 
  * Positive weights = increases risk
  * Negative weights = decreases risk
+ * 
+ * Calibration:
+ * - bias: Baseline risk (slightly negative favors caution)
+ * - distanceNormalized: CRITICAL — closer = higher normalized value = higher risk weight
+ * - approachRate: Strong: approaching the boundary is high-risk
+ * - headingAlignment: Strong: heading toward boundary increases risk
+ * - speed: Moderate: faster movement through danger zone is riskier
+ * - acceleration: Moderate: accelerating toward boundary signals intent
+ * - trajectoryIntersection: Strongest: predicted crossing is imminent/definite
  */
 const WEIGHTS = {
-  bias: -2.0,
-  /** Closer to boundary = higher risk. Normalized by 10km reference distance. */
-  distanceNormalized: -4.0,    // Negative because lower distance = higher risk (inverted in feature)
+  bias: -0.5,
+  /** Closer to boundary = higher NORMALIZED value = HIGHER risk. Positive weight enforces this. */
+  distanceNormalized: 5.0,
   /** Approaching faster = higher risk */
-  approachRate: 3.0,
+  approachRate: 4.5,
   /** Heading toward boundary = higher risk */
-  headingAlignment: 2.5,
+  headingAlignment: 3.5,
   /** Higher speed = moderately higher risk */
-  speed: 1.0,
+  speed: 1.5,
   /** Positive acceleration toward boundary = higher risk */
-  acceleration: 1.5,
+  acceleration: 2.0,
   /** Predicted trajectory intersects boundary = very high risk */
-  trajectoryIntersection: 4.0,
+  trajectoryIntersection: 5.5,
 };
 
 /** Reference distance for normalization (10 km) */
@@ -153,6 +162,32 @@ export function calculateRisk(
   // Get previous state for rate calculations
   const prevState = vesselStates.get(vesselId);
   
+  // === CHECK FOR VIOLATION FIRST ===
+  const geoResult = checkGeofence(position);
+  if (geoResult.isInForbiddenZone) {
+    // Vessel has crossed the boundary — MAXIMUM RISK
+    const violationFactors = [
+      `⛔ VIOLATION: Crossed IMBL boundary`,
+      `Distance: ${Math.round(geoResult.distanceToIMBL)}m into Sri Lankan waters`,
+      `Speed: ${speedKnots.toFixed(1)} knots`,
+      `Status: ${geoResult.statusMessage}`
+    ];
+    
+    return {
+      probability: 1.0, // 100% risk
+      alertLevel: 'violation',
+      features: {
+        distanceToIMBL: geoResult.distanceToIMBL,
+        distanceChangeRate: 0,
+        headingAlignment: 1,
+        speedKnots,
+        acceleration: 0,
+        trajectoryIntersects: true,
+      },
+      riskFactors: violationFactors,
+    };
+  }
+  
   // Calculate features
   const distToIMBL = distanceToIMBL(position);
   
@@ -186,11 +221,19 @@ export function calculateRisk(
   
   // === LOGISTIC REGRESSION ===
   
-  // Normalize features
-  const normalizedDistance = 1 - Math.min(1, distToIMBL / REFERENCE_DISTANCE_M); // 0 = far, 1 = at boundary
-  const normalizedApproachRate = Math.max(0, Math.min(1, distanceChangeRate / 5)); // Clamp 0-1
-  const normalizedSpeed = Math.min(1, speedKnots / MAX_SPEED_KNOTS);
-  const normalizedAccel = Math.max(0, Math.min(1, acceleration / 5)); // Only positive accel
+  // Normalize features (improved calibration for better accuracy)
+  // Distance: 0 if far (100km+), 1 if at/past boundary
+  const normalizedDistance = Math.max(0, Math.min(1, 1 - (distToIMBL / REFERENCE_DISTANCE_M)));
+  
+  // Approach rate: How fast approaching (m/s). Normalize by reference: 5 m/s = high risk
+  // Positive = approaching, negative = moving away → only positive matters
+  const normalizedApproachRate = Math.max(0, Math.min(1, Math.max(0, distanceChangeRate) / 5.0));
+  
+  // Speed: 0–1 where 1 = 20 knots (max fishing speed)
+  const normalizedSpeed = Math.min(1, Math.max(0, speedKnots) / MAX_SPEED_KNOTS);
+  
+  // Acceleration: Only positive (accelerating INTO danger zone matters). Normalize to [-2, +2] knots/sec scale
+  const normalizedAccel = Math.max(0, Math.min(1, Math.max(0, acceleration) / 2.0));
   
   // Compute logit (linear combination)
   const logit =
@@ -205,12 +248,15 @@ export function calculateRisk(
   // Apply sigmoid to get probability
   const probability = sigmoid(logit);
   
-  // Determine alert level
+  // Determine alert level (improved thresholds for better accuracy)
   let alertLevel: AlertLevel;
-  if (probability >= 0.8) {
+  if (probability >= 0.75) {
     alertLevel = 'high_risk';
-  } else if (probability >= 0.5) {
+  } else if (probability >= 0.45) {
     alertLevel = 'advisory';
+  } else if (probability >= 0.25) {
+    // If approaching within 5km, still warn
+    alertLevel = distToIMBL < 5000 ? 'advisory' : 'safe';
   } else {
     alertLevel = 'safe';
   }

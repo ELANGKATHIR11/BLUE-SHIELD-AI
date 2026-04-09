@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Users, Send, Phone, MapPin, Clock, MessageSquare } from 'lucide-react';
-import { BoatData, CoastGuardMessage } from '../App';
+import { BoatData } from '../App';
+import { userService, Message } from '../services/userService';
 
 interface CoastGuardDashboardProps {
   boats: BoatData[];
   onSendMessage: (targetBoat: string, message: string, priority: 'low' | 'medium' | 'high') => void;
   onUpdateBoatStatus: (aisId: string, status: BoatData['status']) => void;
-  messages: CoastGuardMessage[];
+  messages: Message[];
 }
 
 const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
@@ -260,24 +261,57 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
           {/* Recent Messages */}
           {messages.length > 0 && (
             <div className="border-t pt-4 mt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Recent Messages</h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {messages.slice(0, 5).map((message) => (
-                  <div key={message.id} className="flex items-start justify-between p-2 bg-gray-50 rounded text-sm">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{message.targetBoat}</div>
-                      <div className="text-gray-600">{message.message}</div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Communication History</h4>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">REAL-TIME</span>
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {messages.slice().reverse().map((message) => (
+                  <div key={message.id} 
+                    className={`flex flex-col p-3 rounded-lg border shadow-sm transition-all ${
+                      message.senderId === 'COAST_GUARD' 
+                        ? 'bg-blue-50 border-blue-100' 
+                        : 'bg-white border-gray-100 hover:border-blue-200'
+                    }`}
+                    onMouseEnter={() => {
+                      if (message.receiverId === 'COAST_GUARD' && message.status !== 'read') {
+                        userService.markMessageAsRead(message.id);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          message.senderId === 'COAST_GUARD' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {message.senderId === 'COAST_GUARD' ? 'HQ' : message.senderName || message.senderId}
+                        </span>
+                        <span className={`text-[10px] font-bold transition-all ${
+                          message.priority === 'high' ? 'text-red-500' :
+                          message.priority === 'medium' ? 'text-yellow-600' : 'text-blue-500'
+                        }`}>
+                          {(message.priority || 'medium').toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                        <Clock className="h-3 w-3" />
+                        {formatTime(message.timestamp?.seconds * 1000 || message.timestamp || Date.now())}
+                      </div>
                     </div>
-                    <div className="text-right ml-2">
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        message.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                        message.status === 'acknowledged' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
+                    
+                    <p className="text-sm text-gray-800 leading-relaxed mb-2">
+                      {message.message}
+                    </p>
+                    
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                      <div className="text-[10px] text-gray-500">
+                        To: {message.receiverId === 'COAST_GUARD' ? 'Command Center' : 
+                             boats.find(b => b.aisId === message.receiverId)?.boatId || message.receiverId}
+                      </div>
+                      <div className={`text-[10px] font-bold uppercase ${
+                        message.status === 'read' ? 'text-green-600' : 'text-yellow-600'
                       }`}>
                         {message.status}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {formatTime(message.timestamp)}
                       </div>
                     </div>
                   </div>

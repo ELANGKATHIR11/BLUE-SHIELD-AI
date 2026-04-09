@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Ship, Radio, ArrowRight, AlertCircle, Activity, Loader2, CheckCircle } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { userService } from '../services/userService';
 
 interface RegistrationFormProps {
@@ -7,6 +8,7 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
+  const { t } = useLanguage();
   const [aisId, setAisId] = useState('');
   const [boatId, setBoatId] = useState('');
   const [fishermanName, setFishermanName] = useState('');
@@ -20,25 +22,25 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
     const newErrors: { aisId?: string; boatId?: string; fishermanName?: string; contactInfo?: string } = {};
     
     if (!aisId.trim()) {
-      newErrors.aisId = 'AIS Signal ID is required';
+      newErrors.aisId = t('form.ais_id.required');
     } else if (!/^\d{9}$/.test(aisId.trim())) {
-      newErrors.aisId = 'AIS ID must be exactly 9 digits';
+      newErrors.aisId = t('form.ais_id.error');
     }
 
     if (!boatId.trim()) {
-      newErrors.boatId = 'Boat ID is required';
+      newErrors.boatId = t('form.boat_id.required');
     } else if (boatId.trim().length < 3) {
-      newErrors.boatId = 'Boat ID must be at least 3 characters';
+      newErrors.boatId = t('form.boat_id.error');
     }
 
     if (!fishermanName.trim()) {
-      newErrors.fishermanName = 'Captain/Fisherman name is required';
+      newErrors.fishermanName = t('form.fisherman_name.required');
     }
 
     if (!contactInfo.trim()) {
-      newErrors.contactInfo = 'Contact information is required';
+      newErrors.contactInfo = t('form.contact_phone.required');
     } else if (!/^[+]?[1-9][\d]{0,15}$/.test(contactInfo.trim().replace(/[-\s]/g, ''))) {
-      newErrors.contactInfo = 'Please enter a valid phone number';
+      newErrors.contactInfo = t('form.contact_phone.error');
     }
 
     setErrors(newErrors);
@@ -57,7 +59,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
         const userExists = await userService.userExists(aisId.trim());
         if (userExists) {
           setSubmitStatus('error');
-          setStatusMessage('A vessel with this AIS ID is already registered. Please use a different AIS ID.');
+          setStatusMessage(t('form.already_exists'));
           return;
         }
 
@@ -70,7 +72,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
         });
 
         setSubmitStatus('success');
-        setStatusMessage('Registration successful! Your vessel is now being monitored.');
+        setStatusMessage(t('form.register_success_msg'));
 
         // Call the original onRegister function after successful Firebase storage
         setTimeout(() => {
@@ -80,7 +82,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
       } catch (error) {
         console.error('Registration error:', error);
         setSubmitStatus('error');
-        setStatusMessage('Registration failed. Please check your connection and try again.');
+        setStatusMessage(t('form.register_error'));
       } finally {
         setIsSubmitting(false);
       }
@@ -95,23 +97,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
             <Ship className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">
-            Vessel Registration
+            {t('form.register')}
           </h2>
-          <p className="text-slate-500 leading-relaxed text-sm font-medium">Enter your vessel credentials to begin advanced AI monitoring</p>
+          <p className="text-slate-500 leading-relaxed text-sm font-medium">{t('form.register.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="aisId" className="block text-sm font-medium text-gray-700 mb-2">
               <Radio className="h-4 w-4 inline mr-2" />
-              AIS Signal ID
+              {t('form.ais_id')}
             </label>
             <input
               type="text"
               id="aisId"
               value={aisId}
               onChange={(e) => setAisId(e.target.value)}
-              placeholder="Enter 9-digit AIS ID"
+              placeholder={t('form.ais_id.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.aisId ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -128,14 +130,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           <div>
             <label htmlFor="boatId" className="block text-sm font-medium text-gray-700 mb-2">
               <Ship className="h-4 w-4 inline mr-2" />
-              Registered Boat ID
+              {t('form.boat_id')}
             </label>
             <input
               type="text"
               id="boatId"
               value={boatId}
               onChange={(e) => setBoatId(e.target.value)}
-              placeholder="Enter boat registration ID"
+              placeholder={t('form.boat_id.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.boatId ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -151,14 +153,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           <div>
             <label htmlFor="fishermanName" className="block text-sm font-medium text-gray-700 mb-2">
               <Ship className="h-4 w-4 inline mr-2" />
-              Captain/Fisherman Name
+              {t('form.fisherman_name')}
             </label>
             <input
               type="text"
               id="fishermanName"
               value={fishermanName}
               onChange={(e) => setFishermanName(e.target.value)}
-              placeholder="Enter captain or fisherman name"
+              placeholder={t('form.fisherman_name.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.fishermanName ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -174,14 +176,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
           <div>
             <label htmlFor="contactInfo" className="block text-sm font-medium text-gray-700 mb-2">
               <Radio className="h-4 w-4 inline mr-2" />
-              Contact Phone Number
+              {t('form.contact_phone')}
             </label>
             <input
               type="tel"
               id="contactInfo"
               value={contactInfo}
               onChange={(e) => setContactInfo(e.target.value)}
-              placeholder="Enter phone number for emergency contact"
+              placeholder={t('form.contact_phone.placeholder')}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                 errors.contactInfo ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
@@ -208,16 +210,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
             {isSubmitting ? (
               <span className="flex items-center">
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Registering...
+                {t('form.registering')}
               </span>
             ) : submitStatus === 'success' ? (
               <span className="flex items-center">
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Registration Successful!
+                {t('form.register_success')}
               </span>
             ) : (
               <span className="flex items-center">
-                Begin AI Monitoring
+                {t('form.register_button')}
                 <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
             )}
@@ -237,24 +239,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister }) => {
         <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
           <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
             <Activity className="h-4 w-4 mr-2" />
-            Demo Credentials
+            {t('form.demo_credentials')}
           </h3>
           <div className="text-xs text-blue-700 space-y-2">
             <div className="flex justify-between items-center">
               <span>AIS ID:</span>
-              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">123456789</span>
+              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">{t('form.demo_ais')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Boat ID:</span>
-              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">VESSEL-001</span>
+              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">{t('form.demo_boat')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Name:</span>
-              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">Captain Smith</span>
+              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">{t('form.demo_name')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Phone:</span>
-              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">+1-555-0101</span>
+              <span className="font-mono bg-white px-3 py-1 rounded-lg shadow-sm">{t('form.demo_phone')}</span>
             </div>
           </div>
         </div>

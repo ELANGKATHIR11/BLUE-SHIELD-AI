@@ -6,10 +6,13 @@ import {
   Popup,
   Polygon,
   Polyline,
+  Circle,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
 import { BoatData, CoastGuardVessel } from "../App";
+import { runDBSCAN } from "../engines/clusterEngine";
 import {
   FORBIDDEN_ZONE,
   WARNING_ZONE,
@@ -161,6 +164,137 @@ const createBoatIcon = (
   });
 };
 
+/**
+ * Custom hook to interpolate position for smooth movement
+ */
+const useInterpolatedPosition = (targetLat: number, targetLng: number, duration: number = 2000) => {
+  const [pos, setPos] = React.useState<[number, number]>([targetLat, targetLng]);
+  const animationRef = React.useRef<number>();
+  const startTimeRef = React.useRef<number>();
+  const startPosRef = React.useRef<[number, number]>([targetLat, targetLng]);
+
+  React.useEffect(() => {
+    startPosRef.current = pos;
+    startTimeRef.current = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - (startTimeRef.current || 0);
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function: ease-out cubic
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+      const nextLat = startPosRef.current[0] + (targetLat - startPosRef.current[0]) * easedProgress;
+      const nextLng = startPosRef.current[1] + (targetLng - startPosRef.current[1]) * easedProgress;
+
+      setPos([nextLat, nextLng]);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [targetLat, targetLng, duration]);
+
+  return pos;
+};
+
+/**
+ * Marker that moves smoothly between positions
+ */
+const SmoothedMarker: React.FC<{
+  boat: BoatData;
+  isCurrentUser: boolean;
+  onSelect?: (boat: BoatData) => void;
+  userType: string;
+  offset?: number;
+}> = ({ boat, isCurrentUser, onSelect, userType, offset = 0 }) => {
+  const smoothedPosition = useInterpolatedPosition(
+    boat.location.lat + offset, 
+    boat.location.lng + offset,
+    1500 // 1.5s smoothing
+  );
+
+  return (
+    <Marker
+      position={smoothedPosition}
+      icon={createBoatIcon(boat.status, isCurrentUser, boat.heading)}
+      eventHandlers={{
+        click: () => onSelect?.(boat),
+      }}
+    >
+      <Popup>
+        <div className="min-w-48">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-gray-900">
+              {boat.boatId}
+            </h4>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                boat.status === "safe"
+                  ? "bg-green-100 text-green-800"
+                  : boat.status === "warning"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-red-100 text-red-800"
+              }`}
+            >
+              {boat.status.toUpperCase()}
+            </span>
+          </div>
+
+          <div className="space-y-1 text-sm text-gray-600">
+            <div>
+              <strong>AIS ID:</strong> {boat.aisId}
+            </div>
+            {boat.fishermanName && (
+              <div>
+                <strong>Captain:</strong> {boat.fishermanName}
+              </div>
+            )}
+            {boat.contactInfo && userType === "coastguard" && (
+              <div>
+                <strong>Contact:</strong> {boat.contactInfo}
+              </div>
+            )}
+            <div>
+              <strong>Speed:</strong> {boat.speed.toFixed(1)} kts
+            </div>
+            <div>
+              <strong>Heading:</strong> {boat.heading}°
+            </div>
+            <div>
+              <strong>Position:</strong>
+            </div>
+            <div className="font-mono text-xs">
+              {boat.location.lat.toFixed(6)},{" "}
+              {boat.location.lng.toFixed(6)}
+            </div>
+            <div>
+              <strong>Last Update:</strong>{" "}
+              {new Date(boat.lastUpdate).toLocaleTimeString()}
+            </div>
+          </div>
+
+          {isCurrentUser && (
+            <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-800 font-medium">
+              📍 Your Current Position
+            </div>
+          )}
+          {offset > 0 && (
+            <div className="mt-2 p-2 bg-yellow-50 rounded text-xs text-yellow-800 font-medium">
+              ⚠️ Position offset to avoid overlap with Coast Guard vessel
+            </div>
+          )}
+        </div>
+      </Popup>
+    </Marker>
+  );
+};
+
 // Coast Guard vessel icon — uses same ship SVG but with red/official styling
 const createCoastGuardIcon = (isTracking: boolean = false) => {
   const size = 44;
@@ -238,40 +372,34 @@ const MapUpdater: React.FC<{
   const hasInitialized = useRef(false);
   const isUserInteracting = useRef(false);
 
-  // Track user interactions
+  // Track user interactions cleanly
   useEffect(() => {
-    const handleZoomStart = () => {
+    let interactionTimeout: NodeJS.Timeout;
+
+    const handleInteractStart = () => {
       isUserInteracting.current = true;
+      if (interactionTimeout) clearTimeout(interactionTimeout);
     };
 
-    const handleMoveStart = () => {
-      isUserInteracting.current = true;
-    };
-
-    const handleZoomEnd = () => {
-      // Reset after a delay to allow for natural zoom completion
-      setTimeout(() => {
+    const handleInteractEnd = () => {
+      if (interactionTimeout) clearTimeout(interactionTimeout);
+      interactionTimeout = setTimeout(() => {
         isUserInteracting.current = false;
-      }, 1000);
+      }, 2000); // 2 seconds delay before auto-adjusting again
     };
 
-    const handleMoveEnd = () => {
-      // Reset after a delay to allow for natural movement completion
-      setTimeout(() => {
-        isUserInteracting.current = false;
-      }, 1000);
-    };
-
-    map.on("zoomstart", handleZoomStart);
-    map.on("movestart", handleMoveStart);
-    map.on("zoomend", handleZoomEnd);
-    map.on("moveend", handleMoveEnd);
+    // Use drag and touch events to distinctly track user interaction
+    map.on("dragstart", handleInteractStart);
+    map.on("dragend", handleInteractEnd);
+    map.on("zoomstart", handleInteractStart);
+    map.on("zoomend", handleInteractEnd);
 
     return () => {
-      map.off("zoomstart", handleZoomStart);
-      map.off("movestart", handleMoveStart);
-      map.off("zoomend", handleZoomEnd);
-      map.off("moveend", handleMoveEnd);
+      map.off("dragstart", handleInteractStart);
+      map.off("dragend", handleInteractEnd);
+      map.off("zoomstart", handleInteractStart);
+      map.off("zoomend", handleInteractEnd);
+      if (interactionTimeout) clearTimeout(interactionTimeout);
     };
   }, [map]);
 
@@ -285,9 +413,10 @@ const MapUpdater: React.FC<{
       const boat = boats[0];
       // Auto-follow logic
       if (isFollowing) {
-        map.setView([boat.location.lat, boat.location.lng], map.getZoom(), {
+        map.panTo([boat.location.lat, boat.location.lng], {
           animate: true,
-          duration: 1
+          duration: 1.2, // Slightly slower for more organic feel
+          noMoveStart: true
         });
       } else if (!hasInitialized.current) {
         // Only center on the boat on FIRST load if not following
@@ -396,6 +525,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
   coastGuardVessel,
   onBoatSelect,
 }) => {
+  // Compute DBSCAN clusters for Coast Guard
+  const { clusters } = React.useMemo(() => {
+    if (userType !== 'coastguard' || boats.length < 2) return { assignments: [], clusters: [] };
+    return runDBSCAN(boats);
+  }, [boats, userType]);
+
   const mapRef = useRef<L.Map>(null);
   const [mapMode, setMapMode] = React.useState<
     "standard" | "light" | "satellite"
@@ -544,9 +679,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
           zoom={defaultZoom}
           zoomControl={true}
           scrollWheelZoom={true}
-          zoomSnap={0.2}
-          zoomDelta={0.2}
-          wheelPxPerZoomLevel={80}
+          zoomAnimation={true}
+          markerZoomAnimation={true}
           style={{ height: "100%", width: "100%", background: "#0a192f" }}
           ref={mapRef}
         >
@@ -624,7 +758,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
               key={`lm-${idx}`}
               position={[lm.lat, lm.lng]}
               icon={L.divIcon({
-                html: `<div style="font-size:10px;background:${lm.country === "India" ? "#2563EB" : "#DC2626"};color:white;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${lm.name}</div>`,
+                html: `<div class="landmark-label-inner" style="background:${lm.country === "India" ? "#2563EB" : "#DC2626"};">${lm.name}</div>`,
                 className: "landmark-label",
                 iconSize: [0, 0],
                 iconAnchor: [0, 0],
@@ -672,86 +806,41 @@ const WorldMap: React.FC<WorldMapProps> = ({
                   }}
                 />
 
-                <Marker
-                  position={boatPosition}
-                  icon={createBoatIcon(
-                    boat.status,
-                    isCurrentUser,
-                    boat.heading,
-                  )}
-                  eventHandlers={{
-                    click: () => onBoatSelect?.(boat),
-                  }}
-                >
-                  <Popup>
-                    <div className="min-w-48">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          {boat.boatId}
-                        </h4>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            boat.status === "safe"
-                              ? "bg-green-100 text-green-800"
-                              : boat.status === "warning"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {boat.status.toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <div>
-                          <strong>AIS ID:</strong> {boat.aisId}
-                        </div>
-                        {boat.fishermanName && (
-                          <div>
-                            <strong>Captain:</strong> {boat.fishermanName}
-                          </div>
-                        )}
-                        {boat.contactInfo && userType === "coastguard" && (
-                          <div>
-                            <strong>Contact:</strong> {boat.contactInfo}
-                          </div>
-                        )}
-                        <div>
-                          <strong>Speed:</strong> {boat.speed.toFixed(1)} kts
-                        </div>
-                        <div>
-                          <strong>Heading:</strong> {boat.heading}°
-                        </div>
-                        <div>
-                          <strong>Position:</strong>
-                        </div>
-                        <div className="font-mono text-xs">
-                          {boat.location.lat.toFixed(6)},{" "}
-                          {boat.location.lng.toFixed(6)}
-                        </div>
-                        <div>
-                          <strong>Last Update:</strong>{" "}
-                          {new Date(boat.lastUpdate).toLocaleTimeString()}
-                        </div>
-                      </div>
-
-                      {isCurrentUser && (
-                        <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-800 font-medium">
-                          📍 Your Current Position
-                        </div>
-                      )}
-                      {isAtCoastGuardLocation && (
-                        <div className="mt-2 p-2 bg-yellow-50 rounded text-xs text-yellow-800 font-medium">
-                          ⚠️ Position offset to avoid overlap with Coast Guard
-                          vessel
-                        </div>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
+                <SmoothedMarker
+                  boat={boat}
+                  isCurrentUser={isCurrentUser}
+                  onSelect={onBoatSelect}
+                  userType={userType}
+                  offset={isAtCoastGuardLocation ? 0.0002 + index * 0.0001 : 0}
+                />
               </React.Fragment>
             );
           })}
+
+          {/* DBSCAN Clusters (Coast Guard Only) */}
+          {userType === 'coastguard' && clusters.map(c => (
+            <Circle
+              key={`cluster-${c.id}`}
+              center={[c.centerLat, c.centerLng]}
+              radius={c.radiusKm * 1000}
+              pathOptions={{
+                color: c.color,
+                fillColor: c.color,
+                fillOpacity: 0.15,
+                weight: 2,
+                dashArray: "4 4"
+              }}
+            >
+              <Tooltip direction="top" opacity={0.9} permanent className="cluster-tooltip bg-transparent border-0 shadow-none text-xs font-bold">
+                <div 
+                  className="text-shadow-cluster"
+                  style={{ color: c.color }}
+                >
+                  Cluster {c.name} ({c.vesselIds.length} vessels)
+                </div>
+              </Tooltip>
+            </Circle>
+          ))}
 
           {/* Coast Guard Vessel Marker */}
           {coastGuardVessel && userType === "coastguard" && (

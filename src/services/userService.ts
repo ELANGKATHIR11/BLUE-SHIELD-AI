@@ -5,8 +5,12 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  addDoc,
+  deleteDoc,
   query,
   where,
+  orderBy,
+  limit,
   updateDoc,
   serverTimestamp,
   onSnapshot,
@@ -30,25 +34,21 @@ export interface UserDetails {
   };
 }
 
-export interface VesselData {
-  aisId: string;
-  boatId: string;
-  location: {
-    lat: number;
-    lng: number;
-    timestamp: number;
-  };
-  status: "safe" | "warning" | "danger";
-  speed: number;
-  heading: number;
-  lastUpdate: number;
-  fishermanName?: string;
-  contactInfo?: string;
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  message: string;
+  timestamp: Timestamp | FieldValue | number;
+  priority: 'low' | 'medium' | 'high';
+  status: 'sent' | 'delivered' | 'read';
+  senderName?: string;
 }
 
 class UserService {
   private readonly usersCollection = "users";
   private readonly vesselsCollection = "vessels";
+  private readonly messagesCollection = "messages";
 
   // Store user details in Firebase
   async storeUserDetails(
@@ -230,6 +230,115 @@ class UserService {
       return false;
     }
   }
+
+  // Send a message
+  async sendMessage(message: Omit<Message, 'id' | 'timestamp' | 'status'>): Promise<void> {
+    try {
+      const messageCol = collection(db, this.messagesCollection);
+      const messageRef = doc(messageCol);
+      const newMessage: Message = {
+        ...message,
+        id: messageRef.id,
+        timestamp: serverTimestamp(),
+        status: 'sent'
+      };
+      await setDoc(messageRef, newMessage);
+      console.log("✅ Message sent successfully:", newMessage.id);
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
+      throw error;
+    }
+  }
+
+  subscribeToMessages(
+    aisId: string | null, 
+    callback: (messages: Message[]) => void
+  ): () => void {
+    // If aisId is null, we are the Coast Guard (receive all messages)
+    // If aisId is provided, we are a fisherman (receive messages to us OR from us)
+    const q = query(collection(db, this.messagesCollection));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const messages: Message[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Message;
+        // Client-side filtering if complex query is hard
+        if (!aisId || data.senderId === aisId || data.receiverId === aisId) {
+          messages.push(data);
+        }
+      });
+      // Sort by timestamp
+      messages.sort((a, b) => {
+        const timeA = typeof a.timestamp === 'number' ? a.timestamp : ((a.timestamp as {seconds?: number})?.seconds || 0);
+        const timeB = typeof b.timestamp === 'number' ? b.timestamp : ((b.timestamp as {seconds?: number})?.seconds || 0);
+        return timeA - timeB;
+      });
+      callback(messages);
+    }, (error) => {
+      console.error('❌ Error in message subscription:', error);
+    });
+
+    return unsubscribe;
+  }
+
+  // Mark message as read
+  async markMessageAsRead(messageId: string): Promise<void> {
+    try {
+      const messageRef = doc(db, this.messagesCollection, messageId);
+      await updateDoc(messageRef, {
+        status: 'read'
+      });
+      console.log("✅ Message marked as read:", messageId);
+    } catch (error) {
+      console.error("❌ Error marking message as read:", error);
+      throw error;
+    }
+  }
+
+
+  // Delete a vessel document (digital twin cleanup)
+  async deleteVessel(aisId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, this.vesselsCollection, aisId));
+    } catch { /* ignore */ }
+  }
+
+  // GPS history (60s throttled writes for Spark plan compliance)
+  private _lastHistoryWrite = new Map<string, number>();
+
+  async storeGPSHistory(aisId: string, lat: number, lng: number, speed: number, heading: number): Promise<void> {
+    const now = Date.now();
+    const last = this._lastHistoryWrite.get(aisId) ?? 0;
+    if (now - last < 60_000) return;
+    this._lastHistoryWrite.set(aisId, now);
+    try {
+      await addDoc(collection(db, 'vessel_gps_history'), { aisId, lat, lng, speed, heading, timestamp: now, recordedAt: serverTimestamp() });
+    } catch { /* ignore */ }
+  }
+
+  async getVesselGPSHistory(aisId: string, maxPts = 200): Promise<{ lat: number; lng: number; speed: number; heading: number; timestamp: number }[]> {
+    try {
+      const q = query(collection(db, 'vessel_gps_history'), where('aisId', '==', aisId), orderBy('timestamp', 'asc'), limit(maxPts));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data() as { lat: number; lng: number; speed: number; heading: number; timestamp: number });
+    } catch { return []; }
+  }
+}
+
+export interface VesselData {
+  aisId: string;
+  boatId: string;
+  location: {
+    lat: number;
+    lng: number;
+    timestamp: number;
+  };
+  status: "safe" | "warning" | "danger";
+  speed: number;
+  heading: number;
+  lastUpdate: number;
+  fishermanName?: string;
+  contactInfo?: string;
 }
 
 export const userService = new UserService();
