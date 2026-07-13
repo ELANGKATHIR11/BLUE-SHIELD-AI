@@ -24,6 +24,7 @@ import { calculateRisk } from './engines/riskModel';
 import { VesselTracker } from './engines/kalmanFilter';
 import { detectAnomalies } from './engines/anomalyDetector';
 import { telemetryEngine } from './engines/telemetryEngine';
+import { checkExtendedEEZBoundaries, initializeBoundaries } from './engines/boundaryAlerts';
 
 export interface BoatData {
   aisId: string;
@@ -100,6 +101,11 @@ function App() {
     };
     setAlerts(prev => [newAlert, ...prev].slice(0, 50));
   };
+
+  // Load GIS boundaries on mount
+  useEffect(() => {
+    initializeBoundaries();
+  }, []);
 
   // Initialize Coast Guard vessel and subscribe to data
   useEffect(() => {
@@ -260,6 +266,30 @@ function App() {
             });
           }
           
+          // === AUTO-MESSAGE: GIS BOUNDARY ALERTS ===
+          const extendedGeo = checkExtendedEEZBoundaries(position);
+          const eezKey = `${boat.aisId}-eez`;
+          if (extendedGeo.alertLevel === 'danger' && !violationNotifiedRef.current.has(eezKey)) {
+            violationNotifiedRef.current.add(eezKey);
+
+            userService.sendMessage({
+              senderId: 'COAST_GUARD',
+              receiverId: boat.aisId,
+              message: extendedGeo.alertMessage,
+              priority: 'high',
+              senderName: 'BLUE SHIELD GIS Engine'
+            }).then(() => {
+              addAlert({
+                type: 'danger',
+                message: `GIS ALARM: ${boat.boatId} ${extendedGeo.alertMessage}`,
+                zone: 'EEZ Border Violation',
+                targetBoat: boat.boatId,
+              });
+            }).catch(err => console.error('Failed to send GIS message:', err));
+          } else if (extendedGeo.alertLevel !== 'danger' && violationNotifiedRef.current.has(eezKey)) {
+            violationNotifiedRef.current.delete(eezKey);
+          }
+          
           // Clear notified status if vessel exits violation zone
           if (risk.probability < 1.0 && violationNotifiedRef.current.has(boat.aisId)) {
             violationNotifiedRef.current.delete(boat.aisId);
@@ -404,11 +434,29 @@ function App() {
 
   const updateLocation = async (lat: number, lng: number) => {
     if (boatData) {
-      const updatedBoat = {
+      // Run GIS boundary check
+      const extendedGeo = checkExtendedEEZBoundaries({ lat, lng });
+      const currentStatus: BoatData['status'] = extendedGeo.alertLevel === 'danger' 
+        ? 'danger' 
+        : extendedGeo.alertLevel === 'warning' 
+          ? 'warning' 
+          : boatData.status;
+
+      const updatedBoat: BoatData = {
         ...boatData,
         location: { lat, lng, timestamp: Date.now() },
+        status: currentStatus,
         lastUpdate: Date.now()
       };
+
+      if (extendedGeo.alertLevel === 'danger') {
+        addAlert({
+          type: 'danger',
+          message: extendedGeo.alertMessage,
+          zone: 'EEZ Border Violation',
+          targetBoat: boatData.boatId
+        });
+      }
 
       // Debug logging for fisherman location updates
       console.log('🚢 Fisherman location updated:', {
@@ -428,12 +476,13 @@ function App() {
         return updated;
       });
 
-      // Update location in Firebase
+      // Update location in Firebase and PostGIS
       try {
         await userService.updateUserLocation(boatData.aisId, { lat, lng, timestamp: Date.now() });
         await userService.storeVesselData(updatedBoat);
+        await userService.logTelemetryToPostGIS(updatedBoat);
       } catch (error) {
-        console.error('Error updating location in Firebase:', error);
+        console.error('Error updating location in Firebase/PostGIS:', error);
       }
     }
   };

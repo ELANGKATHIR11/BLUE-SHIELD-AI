@@ -23,3 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Backend dependencies
+backend/node_modules/
+backend/.env
+
+# Large GIS raw datasets
+public/data/gis/*.zip
+public/data/gis/*.geojson
+!public/data/gis/simplified/
+public/data/gis/danger_zones_risk_map.tif

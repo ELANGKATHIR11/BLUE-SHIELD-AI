@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -9,6 +9,7 @@ import {
   Circle,
   Tooltip,
   useMap,
+  GeoJSON,
 } from "react-leaflet";
 import L from "leaflet";
 import { BoatData, CoastGuardVessel } from "../App";
@@ -413,11 +414,15 @@ const MapUpdater: React.FC<{
       const boat = boats[0];
       // Auto-follow logic
       if (isFollowing) {
-        map.panTo([boat.location.lat, boat.location.lng], {
-          animate: true,
-          duration: 1.2, // Slightly slower for more organic feel
-          noMoveStart: true
-        });
+        const center = map.getCenter();
+        const dist = map.distance(center, [boat.location.lat, boat.location.lng]);
+        // Only pan if the boat has moved more than 20 meters from current center
+        if (dist > 20) {
+          map.panTo([boat.location.lat, boat.location.lng], {
+            animate: true,
+            duration: 0.4,
+          });
+        }
       } else if (!hasInitialized.current) {
         // Only center on the boat on FIRST load if not following
         map.setView([boat.location.lat, boat.location.lng], 13);
@@ -536,6 +541,31 @@ const WorldMap: React.FC<WorldMapProps> = ({
     "standard" | "light" | "satellite"
   >("standard");
   const [isFollowing, setIsFollowing] = React.useState(userType === "fisherman");
+
+  // Load GIS layers
+  const [indiaEEZ, setIndiaEEZ] = useState<any>(null);
+  const [andamanEEZ, setAndamanEEZ] = useState<any>(null);
+  const [sriLankaEEZ, setSriLankaEEZ] = useState<any>(null);
+  const [maldivesEEZ, setMaldivesEEZ] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/data/gis/simplified/india_eez_simplified.geojson')
+      .then(r => r.json())
+      .then(setIndiaEEZ)
+      .catch(err => console.error("Error loading India EEZ:", err));
+    fetch('/data/gis/simplified/andaman_nicobar_eez_simplified.geojson')
+      .then(r => r.json())
+      .then(setAndamanEEZ)
+      .catch(err => console.error("Error loading A&N EEZ:", err));
+    fetch('/data/gis/simplified/sri_lanka_eez_simplified.geojson')
+      .then(r => r.json())
+      .then(setSriLankaEEZ)
+      .catch(err => console.error("Error loading Sri Lanka EEZ:", err));
+    fetch('/data/gis/simplified/maldives_eez_simplified.geojson')
+      .then(r => r.json())
+      .then(setMaldivesEEZ)
+      .catch(err => console.error("Error loading Maldives EEZ:", err));
+  }, []);
 
   // Default center — Palk Strait (Tamil Nadu / Sri Lanka maritime boundary)
   const defaultCenter: [number, number] = [
@@ -681,6 +711,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
           scrollWheelZoom={true}
           zoomAnimation={true}
           markerZoomAnimation={true}
+          preferCanvas={true}
+          maxBounds={[[0.0, 60.0], [30.0, 100.0]]}
+          maxBoundsViscosity={1.0}
+          minZoom={4}
           style={{ height: "100%", width: "100%", background: "#0a192f" }}
           ref={mapRef}
         >
@@ -751,6 +785,60 @@ const WorldMap: React.FC<WorldMapProps> = ({
               opacity: 0.9,
             }}
           />
+
+          {/* India EEZ Boundary (Green border, transparent fill) */}
+          {indiaEEZ && (
+            <GeoJSON
+              data={indiaEEZ}
+              style={{
+                color: "#10B981",
+                weight: 1.5,
+                fillColor: "#10B981",
+                fillOpacity: 0.01,
+                dashArray: "4, 4"
+              }}
+            />
+          )}
+
+          {/* Andaman & Nicobar EEZ Boundary (Green border, transparent fill) */}
+          {andamanEEZ && (
+            <GeoJSON
+              data={andamanEEZ}
+              style={{
+                color: "#10B981",
+                weight: 1.5,
+                fillColor: "#10B981",
+                fillOpacity: 0.01,
+                dashArray: "4, 4"
+              }}
+            />
+          )}
+
+          {/* Sri Lanka EEZ Boundary (Red border representing danger prohibited boundary) */}
+          {sriLankaEEZ && (
+            <GeoJSON
+              data={sriLankaEEZ}
+              style={{
+                color: "#EF4444",
+                weight: 2,
+                fillColor: "#EF4444",
+                fillOpacity: 0.04
+              }}
+            />
+          )}
+
+          {/* Maldives EEZ Boundary (Red border representing danger prohibited boundary) */}
+          {maldivesEEZ && (
+            <GeoJSON
+              data={maldivesEEZ}
+              style={{
+                color: "#EF4444",
+                weight: 2,
+                fillColor: "#EF4444",
+                fillOpacity: 0.04
+              }}
+            />
+          )}
 
           {/* Landmark Markers */}
           {LANDMARKS.map((lm, idx) => (

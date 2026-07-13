@@ -323,6 +323,28 @@ class UserService {
       return snap.docs.map(d => d.data() as { lat: number; lng: number; speed: number; heading: number; timestamp: number });
     } catch { return []; }
   }
+
+  // Sync to PostgreSQL / PostGIS database
+  async logTelemetryToPostGIS(vesselData: any): Promise<void> {
+    try {
+      const response = await fetch('http://localhost:5000/api/vessels/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aisId: vesselData.aisId,
+          boatId: vesselData.boatId,
+          lat: vesselData.location.lat,
+          lng: vesselData.location.lng,
+          speed: vesselData.speed || 0,
+          heading: vesselData.heading || 0
+        })
+      });
+      const data = await response.json();
+      console.log('📬 PostGIS Telemetry Logged:', data);
+    } catch (error) {
+      console.error('⚠️ Failed to sync telemetry to PostGIS:', error);
+    }
+  }
 }
 
 export interface VesselData {
