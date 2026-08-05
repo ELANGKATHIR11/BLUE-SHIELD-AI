@@ -58,7 +58,7 @@ export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin 
         {mode === 'login' ? (
           <FishermanLogin onLogin={handleLoginSuccess} onBack={() => navigate('/roles')} />
         ) : (
-          <RegistrationForm onRegister={(boatData) => handleLoginSuccess(boatData.aisId, boatData.boatId, boatData.fishermanName || '', boatData.contactInfo || '')} />
+          <RegistrationForm onRegister={handleLoginSuccess} />
         )}
       </div>
     </div>

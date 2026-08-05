@@ -181,7 +181,7 @@ function App() {
             boat.speed,
             distanceToBorderKm,
             timestamp,
-            geofenceResult.alertLevel === 'warning'
+            geofenceResult.alertLevel === 'advisory' || geofenceResult.alertLevel === 'high_risk'
           );
           newAnomalyScores[boat.aisId] = anomalyState.anomalyScore;
 
@@ -252,7 +252,7 @@ function App() {
 
     const newLocation = { lat, lng, timestamp: Date.now() };
     const geoResult = checkGeofence(newLocation);
-    const status: BoatData['status'] = geoResult.alertLevel === 'violation' ? 'danger' : geoResult.alertLevel === 'warning' ? 'warning' : 'safe';
+    const status: BoatData['status'] = geoResult.alertLevel === 'violation' ? 'danger' : geoResult.alertLevel === 'high_risk' || geoResult.alertLevel === 'advisory' ? 'warning' : 'safe';
     
     const updatedBoat: BoatData = {
       ...boatData,
