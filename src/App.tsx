@@ -284,13 +284,18 @@ function App() {
       location: { lat, lng, timestamp: Date.now() },
       speed: speed ?? coastGuardVessel.speed,
       heading: heading ?? coastGuardVessel.heading,
+      isTracking: true,
       lastUpdate: Date.now()
     };
     setCoastGuardVessel(updated);
   };
 
   const toggleCoastGuardTracking = () => {
-    setIsCoastGuardTracking(prev => !prev);
+    setIsCoastGuardTracking(prev => {
+      const nextState = !prev;
+      setCoastGuardVessel(current => current ? { ...current, isTracking: nextState } : null);
+      return nextState;
+    });
   };
 
   const sendCoastGuardMessage = (targetBoat: string, messageText: string, priority: 'low' | 'medium' | 'high') => {
