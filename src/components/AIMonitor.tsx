@@ -8,6 +8,7 @@ import { generateAlertExplanation, getStaticAlert, type BilingualAlert } from '.
 import { detectAnomalies, type AnomalyState } from '../engines/anomalyDetector';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAudioAlert } from '../hooks/useAudioAlert';
+import { mlInferenceService } from '../services/mlInferenceService';
 import Typewriter from './Typewriter';
 
 interface AIMonitorProps {
@@ -81,8 +82,13 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
       );
       setAnomalyState(anomaly);
 
-      // === Emit risk update for Coast Guard dashboard ===
-      onRiskUpdate?.(data.aisId, risk.probability, anomaly.anomalyScore);
+      // === LAYER 6: Real ML Model Evaluation ===
+      try {
+        const mlResult = await mlInferenceService.predictLiveTelemetry(data);
+        onRiskUpdate?.(data.aisId, mlResult.isFishingProbability, mlResult.anomalyScore);
+      } catch (err) {
+        onRiskUpdate?.(data.aisId, risk.probability, anomaly.anomalyScore);
+      }
 
       // === Determine final alert level (highest wins) ===
       let finalAlertLevel: AlertLevel = risk.alertLevel;
