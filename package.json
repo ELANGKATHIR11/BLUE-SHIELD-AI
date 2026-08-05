@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start:all": "concurrently -n \"FRONTEND,BACKEND\" -c \"cyan,magenta\" \"npm run dev\" \"cd apps/api/src && python -m uvicorn blueshield_api.main:app --host 0.0.0.0 --port 8000\"",
     "lint": "eslint .",
     "preview": "vite preview",
     "browser": "electron ./node_modules/simple-browser/build/main.js http://localhost:5173"
@@ -30,6 +31,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.5.4",
+    "concurrently": "^10.0.4",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
