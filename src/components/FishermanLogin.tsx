@@ -120,9 +120,12 @@ const FishermanLogin: React.FC<FishermanLoginProps> = ({ onLogin, onBack }) => {
               type="text"
               id="aisId"
               value={aisId}
-              onChange={(e) => setAisId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setAisId(val);
+              }}
               placeholder={t('form.ais_id.placeholder')}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-slate-900 bg-white ${
                 errors.aisId ? 'border-red-300 bg-red-50' : 'border-gray-300'
               } hover:border-blue-400 transition-all duration-200`}
               maxLength={9}
