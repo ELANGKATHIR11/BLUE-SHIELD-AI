@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Waves, Anchor, Radio, Users, Compass, Activity, ArrowRight, Lock } from 'lucide-react';
+import { Shield, Anchor, Users, Compass, Activity, ArrowRight } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 
 export const HomePage: React.FC = () => {
@@ -38,11 +38,6 @@ export const HomePage: React.FC = () => {
 
       {/* Hero Section */}
       <main className="flex-1 container mx-auto px-6 py-16 flex flex-col justify-center items-center text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-950/80 border border-sky-800 text-sky-300 text-xs font-bold uppercase tracking-wider mb-8">
-          <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-          Next-Gen AI Maritime Safety & Enforcement
-        </div>
-
         <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight max-w-4xl leading-tight">
           Protecting Indian Fishermen & Guarding Maritime Frontiers
         </h2>

@@ -3,18 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import FishermanLogin from '../components/FishermanLogin';
 import RegistrationForm from '../components/RegistrationForm';
 import { Waves, ArrowLeft } from 'lucide-react';
-import { BoatData } from '../App';
 
 interface FishermanLoginPageProps {
-  onLogin: (data: BoatData) => void;
+  onLogin: (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => void;
 }
 
 export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const navigate = useNavigate();
 
-  const handleSuccess = (data: BoatData) => {
-    onLogin(data);
+  const handleLoginSuccess = (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => {
+    onLogin(aisId, boatId, fishermanName, contactInfo);
     navigate('/fisherman/workspace');
   };
 
@@ -57,9 +56,9 @@ export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin 
         </div>
 
         {mode === 'login' ? (
-          <FishermanLogin onLogin={handleSuccess} onBack={() => navigate('/roles')} />
+          <FishermanLogin onLogin={handleLoginSuccess} onBack={() => navigate('/roles')} />
         ) : (
-          <RegistrationForm onRegister={handleSuccess} />
+          <RegistrationForm onRegister={(boatData) => handleLoginSuccess(boatData.aisId, boatData.boatId, boatData.fishermanName || '', boatData.contactInfo || '')} />
         )}
       </div>
     </div>

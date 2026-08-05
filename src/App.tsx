@@ -161,37 +161,36 @@ function App() {
 
           telemetryEngine.recordExecution('kalman-filter', Math.random() * 5, true, 1);
 
-          const prediction = tracker.predictNextPosition();
-          const riskInput = {
-            distanceToBorder: calculateApproxDistanceToBorder(position),
-            headingDegrees: boat.heading,
-            speedKnots: boat.speed,
-            predictedLat: prediction.lat,
-            predictedLng: prediction.lng,
-            timeWindowMinutes: 15
-          };
+          const trajectoryPrediction = tracker.predictTrajectory();
+          const riskAssessment = calculateRisk(
+            boat.aisId,
+            position,
+            boat.speed,
+            boat.heading,
+            trajectoryPrediction.predictedPoints,
+            timestamp
+          );
+          newRiskProbs[boat.aisId] = riskAssessment.probability;
 
-          const riskScore = calculateRisk(riskInput);
-          newRiskProbs[boat.aisId] = riskScore.riskProbability;
+          const distanceToBorderKm = calculateApproxDistanceToBorder(position);
+          const geofenceResult = checkGeofence(position);
 
-          const recentHistory = tracker.getHistory(5);
-          const historyForAnomaly = recentHistory.map(h => ({
-            lat: h.position.lat,
-            lng: h.position.lng,
-            timestamp: h.timestamp,
-            speed: boat.speed,
-            heading: boat.heading
-          }));
+          const anomalyState = detectAnomalies(
+            boat.aisId,
+            boat.heading,
+            boat.speed,
+            distanceToBorderKm,
+            timestamp,
+            geofenceResult.alertLevel === 'warning'
+          );
+          newAnomalyScores[boat.aisId] = anomalyState.anomalyScore;
 
-          const anomalyResults = detectAnomalies(historyForAnomaly);
-          newAnomalyScores[boat.aisId] = anomalyResults.anomalyScore;
-
-          const eeZAlerts = checkExtendedEEZBoundaries(position, boat.aisId, boat.boatId);
-          eeZAlerts.forEach(alertText => {
-            const isDanger = alertText.includes('CRITICAL') || alertText.includes('BREACH');
+          const eezResult = checkExtendedEEZBoundaries(position);
+          if (eezResult.alertLevel !== 'safe') {
+            const isDanger = eezResult.alertLevel === 'danger';
             addAlert({
               type: isDanger ? 'danger' : 'warning',
-              message: `${boat.boatId} (${boat.aisId}): ${alertText}`,
+              message: `${boat.boatId} (${boat.aisId}): ${eezResult.alertMessage}`,
               targetBoat: boat.boatId
             });
 
@@ -201,11 +200,11 @@ function App() {
                 senderId: 'COAST_GUARD',
                 senderName: 'Coast Guard Command',
                 receiverId: boat.aisId,
-                message: alertText,
+                message: eezResult.alertMessage,
                 priority: 'high'
               });
             }
-          });
+          }
         } catch (err) {
           console.error(`Error calculating risk for boat ${boat.aisId}:`, err);
         }
@@ -226,56 +225,65 @@ function App() {
     return Math.sqrt(dLat * dLat + dLng * dLng);
   };
 
-  const handleFishermanRegistration = (data: BoatData) => {
-    setBoatData(data);
+  const handleFishermanRegistration = (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => {
+    const newBoat: BoatData = {
+      aisId,
+      boatId,
+      location: { lat: 9.2884, lng: 79.3129, timestamp: Date.now() },
+      status: 'safe',
+      speed: 0,
+      heading: 0,
+      lastUpdate: Date.now(),
+      fishermanName,
+      contactInfo
+    };
+    setBoatData(newBoat);
     setIsTracking(true);
-    userService.registerVessel(data);
+    userService.storeVesselData(newBoat);
     addAlert({
       type: 'info',
-      message: `System active. AIS Transponder ID: ${data.aisId}`,
-      targetBoat: data.boatId
+      message: `System active. AIS Transponder ID: ${aisId}`,
+      targetBoat: boatId
     });
   };
 
-  const updateLocation = (lat: number, lng: number, speed: number, heading: number) => {
+  const updateLocation = (lat: number, lng: number) => {
     if (!boatData) return;
 
     const newLocation = { lat, lng, timestamp: Date.now() };
-    const status = checkGeofence(newLocation);
+    const geoResult = checkGeofence(newLocation);
+    const status: BoatData['status'] = geoResult.alertLevel === 'violation' ? 'danger' : geoResult.alertLevel === 'warning' ? 'warning' : 'safe';
     
     const updatedBoat: BoatData = {
       ...boatData,
       location: newLocation,
-      speed,
-      heading,
       status,
       lastUpdate: Date.now()
     };
 
     setBoatData(updatedBoat);
-    userService.updateVesselLocation(updatedBoat);
+    userService.updateUserLocation(updatedBoat.aisId, newLocation);
   };
 
   const updateBoatStatus = (newStatus: 'safe' | 'warning' | 'danger') => {
     if (!boatData) return;
     const updated = { ...boatData, status: newStatus };
     setBoatData(updated);
-    userService.updateVesselLocation(updated);
+    userService.updateVesselStatus(updated.aisId, newStatus);
   };
 
-  const handleRiskUpdate = (riskProbability: number, anomalyScore: number) => {
-    if (!boatData) return;
-    setRiskProbabilities(prev => ({ ...prev, [boatData.aisId]: riskProbability }));
-    setAnomalyScores(prev => ({ ...prev, [boatData.aisId]: anomalyScore }));
+  const handleRiskUpdate = (vesselId: string, probability: number, anomalyScore: number) => {
+    setRiskProbabilities(prev => ({ ...prev, [vesselId]: probability }));
+    setAnomalyScores(prev => ({ ...prev, [vesselId]: anomalyScore }));
   };
 
-  const updateCoastGuardLocation = (lat: number, lng: number, speed: number, heading: number) => {
+  const updateCoastGuardLocation = (lat: number, lng: number, speed?: number, heading?: number) => {
     if (!coastGuardVessel) return;
     const updated: CoastGuardVessel = {
       ...coastGuardVessel,
       location: { lat, lng, timestamp: Date.now() },
-      speed,
-      heading,
+      speed: speed ?? coastGuardVessel.speed,
+      heading: heading ?? coastGuardVessel.heading,
       lastUpdate: Date.now()
     };
     setCoastGuardVessel(updated);
@@ -285,11 +293,11 @@ function App() {
     setIsCoastGuardTracking(prev => !prev);
   };
 
-  const sendCoastGuardMessage = (receiverId: string, messageText: string, priority: 'normal' | 'high' | 'medium') => {
+  const sendCoastGuardMessage = (targetBoat: string, messageText: string, priority: 'low' | 'medium' | 'high') => {
     userService.sendMessage({
       senderId: 'COAST_GUARD',
       senderName: 'Coast Guard Command Center',
-      receiverId,
+      receiverId: targetBoat,
       message: messageText,
       priority
     });
@@ -299,7 +307,7 @@ function App() {
     setAllBoats(prev => prev.map(boat => {
       if (boat.boatId === boatId || boat.aisId === boatId) {
         const updated = { ...boat, status: newStatus };
-        userService.updateVesselLocation(updated);
+        userService.updateVesselStatus(updated.aisId, newStatus);
         return updated;
       }
       return boat;

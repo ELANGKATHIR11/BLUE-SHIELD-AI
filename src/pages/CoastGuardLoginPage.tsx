@@ -33,7 +33,7 @@ export const CoastGuardLoginPage: React.FC<CoastGuardLoginPageProps> = ({ onAuth
       </div>
 
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl backdrop-blur-xl shadow-2xl relative z-10">
-        <CoastGuardLogin onLogin={handleLoginSuccess} />
+        <CoastGuardLogin onLogin={handleLoginSuccess} onBack={() => navigate('/roles')} />
       </div>
     </div>
   );

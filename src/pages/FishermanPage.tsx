@@ -16,9 +16,9 @@ interface FishermanPageProps {
   boatData: BoatData | null;
   isTracking: boolean;
   alerts: Alert[];
-  updateLocation: (lat: number, lng: number, speed: number, heading: number) => void;
+  updateLocation: (lat: number, lng: number) => void;
   updateBoatStatus: (status: 'safe' | 'warning' | 'danger') => void;
-  handleRiskUpdate: (riskProbability: number, anomalyScore: number) => void;
+  handleRiskUpdate: (vesselId: string, probability: number, anomalyScore: number) => void;
   addAlert: (alert: Omit<Alert, 'id' | 'timestamp'>) => void;
   onLogout: () => void;
 }

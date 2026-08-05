@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Anchor, Shield, Waves, ArrowRight, UserCheck, Lock } from 'lucide-react';
+import { Anchor, Shield, ArrowRight } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 
 export const RoleSelectionPage: React.FC = () => {

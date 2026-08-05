@@ -6,7 +6,7 @@ import { Message } from '../services/userService';
 interface CoastGuardCommunicationPageProps {
   allBoats: BoatData[];
   messages: Message[];
-  sendCoastGuardMessage: (receiverId: string, messageText: string, priority: 'normal' | 'high' | 'medium') => void;
+  sendCoastGuardMessage: (targetBoat: string, messageText: string, priority: 'low' | 'medium' | 'high') => void;
   updateBoatStatusByCoastGuard: (boatId: string, newStatus: 'safe' | 'warning' | 'danger') => void;
 }
 

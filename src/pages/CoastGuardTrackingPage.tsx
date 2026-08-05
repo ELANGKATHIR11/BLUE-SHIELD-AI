@@ -14,7 +14,7 @@ interface CoastGuardTrackingPageProps {
   alerts: Alert[];
   anomalyScores: Record<string, number>;
   riskProbabilities: Record<string, number>;
-  updateCoastGuardLocation: (lat: number, lng: number, speed: number, heading: number) => void;
+  updateCoastGuardLocation: (lat: number, lng: number, speed?: number, heading?: number) => void;
   toggleCoastGuardTracking: () => void;
 }
 
