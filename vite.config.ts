@@ -10,14 +10,22 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          leaflet: ['leaflet', 'react-leaflet'],
-          firebase: ['firebase/app', 'firebase/firestore', 'firebase/auth'],
-          ui: ['lucide-react'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+            return 'vendor';
+          }
+          if (id.includes('node_modules/leaflet/') || id.includes('node_modules/react-leaflet/')) {
+            return 'leaflet';
+          }
+          if (id.includes('node_modules/firebase/')) {
+            return 'firebase';
+          }
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'ui';
+          }
         },
       },
     },
-    chunkSizeWarningLimit: 1000, // Increase warning limit to 1MB to reduce noise after splitting
+    chunkSizeWarningLimit: 1000,
   },
 });
