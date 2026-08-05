@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, User, AlertCircle, ArrowRight, Waves, Loader2 } from 'lucide-react';
+import { Shield, Lock, User, AlertCircle, ArrowRight, Waves } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface CoastGuardLoginProps {
