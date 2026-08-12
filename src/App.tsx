@@ -8,7 +8,6 @@ import { FishermanPage } from './pages/FishermanPage';
 import { CoastGuardLayout } from './layouts/CoastGuardLayout';
 import { CoastGuardTrackingPage } from './pages/CoastGuardTrackingPage';
 import { CoastGuardCommunicationPage } from './pages/CoastGuardCommunicationPage';
-import { CoastGuardAIEnginePage } from './pages/CoastGuardAIEnginePage';
 
 import { userService, Message } from './services/userService';
 import { checkGeofence } from './engines/geofence';
@@ -105,7 +104,16 @@ function App() {
       setCoastGuardVessel(cgVessel);
 
       const unsubscribe = userService.subscribeToVessels((vessels) => {
-        setAllBoats(vessels);
+        const liveVesselsOnly = vessels.filter(
+          (v) =>
+            v &&
+            v.aisId &&
+            !v.aisId.startsWith('SIM-') &&
+            !v.aisId.startsWith('MOCK-') &&
+            !v.boatId?.startsWith('DIGITAL-TWIN-') &&
+            !v.fishermanName?.includes('[SIMULATION]')
+        );
+        setAllBoats(liveVesselsOnly);
       });
 
       return () => unsubscribe();
@@ -226,28 +234,44 @@ function App() {
   };
 
   const handleFishermanRegistration = (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => {
-    const newBoat: BoatData = {
-      aisId,
-      boatId,
-      location: { lat: 9.2884, lng: 79.3129, timestamp: Date.now() },
-      status: 'safe',
-      speed: 0,
-      heading: 0,
-      lastUpdate: Date.now(),
-      fishermanName,
-      contactInfo
+    const initBoat = (lat: number, lng: number, speed = 0, heading = 0) => {
+      const newBoat: BoatData = {
+        aisId,
+        boatId,
+        location: { lat, lng, timestamp: Date.now() },
+        status: 'safe',
+        speed,
+        heading,
+        lastUpdate: Date.now(),
+        fishermanName,
+        contactInfo
+      };
+      setBoatData(newBoat);
+      setIsTracking(true);
+      userService.storeVesselData(newBoat);
+      addAlert({
+        type: 'info',
+        message: `System active. AIS Transponder ID: ${aisId}`,
+        targetBoat: boatId
+      });
     };
-    setBoatData(newBoat);
-    setIsTracking(true);
-    userService.storeVesselData(newBoat);
-    addAlert({
-      type: 'info',
-      message: `System active. AIS Transponder ID: ${aisId}`,
-      targetBoat: boatId
-    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const speed = pos.coords.speed !== null ? pos.coords.speed * 1.94384 : 0;
+          const heading = pos.coords.heading !== null ? pos.coords.heading : 0;
+          initBoat(pos.coords.latitude, pos.coords.longitude, speed, heading);
+        },
+        () => initBoat(9.2884, 79.3129),
+        { enableHighAccuracy: true, timeout: 4000 }
+      );
+    } else {
+      initBoat(9.2884, 79.3129);
+    }
   };
 
-  const updateLocation = (lat: number, lng: number) => {
+  const updateLocation = (lat: number, lng: number, speed?: number, heading?: number) => {
     if (!boatData) return;
 
     const newLocation = { lat, lng, timestamp: Date.now() };
@@ -257,12 +281,15 @@ function App() {
     const updatedBoat: BoatData = {
       ...boatData,
       location: newLocation,
+      speed: speed !== undefined ? speed : boatData.speed,
+      heading: heading !== undefined ? heading : boatData.heading,
       status,
       lastUpdate: Date.now()
     };
 
     setBoatData(updatedBoat);
     userService.updateUserLocation(updatedBoat.aisId, newLocation);
+    userService.storeVesselData(updatedBoat);
   };
 
   const updateBoatStatus = (newStatus: 'safe' | 'warning' | 'danger') => {
@@ -298,13 +325,15 @@ function App() {
     });
   };
 
-  const sendCoastGuardMessage = (targetBoat: string, messageText: string, priority: 'low' | 'medium' | 'high') => {
+  const sendCoastGuardMessage = (targetBoat: string, messageText: string, priority: 'low' | 'medium' | 'high', audioData?: string) => {
     userService.sendMessage({
       senderId: 'COAST_GUARD',
       senderName: 'Coast Guard Command Center',
       receiverId: targetBoat,
       message: messageText,
-      priority
+      priority,
+      audioData,
+      isVoiceNote: !!audioData
     });
   };
 
@@ -379,7 +408,6 @@ function App() {
             />
           }
         />
-        <Route path="ai-control" element={<CoastGuardAIEnginePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

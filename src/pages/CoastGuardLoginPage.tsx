@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CoastGuardLogin from '../components/CoastGuardLogin';
 import { Shield, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CoastGuardLoginPageProps {
   onAuthenticate: () => void;
@@ -9,6 +10,7 @@ interface CoastGuardLoginPageProps {
 
 export const CoastGuardLoginPage: React.FC<CoastGuardLoginPageProps> = ({ onAuthenticate }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleLoginSuccess = () => {
     onAuthenticate();
@@ -20,7 +22,7 @@ export const CoastGuardLoginPage: React.FC<CoastGuardLoginPageProps> = ({ onAuth
       <div className="absolute top-6 left-6 z-10">
         <Link to="/roles" className="flex items-center gap-2 text-slate-700 hover:text-blue-900 bg-white px-4 py-2 rounded-xl border border-slate-200 transition-colors text-sm font-semibold shadow-sm">
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Roles</span>
+          <span>{t('nav.backToRoles')}</span>
         </Link>
       </div>
 
@@ -28,8 +30,8 @@ export const CoastGuardLoginPage: React.FC<CoastGuardLoginPageProps> = ({ onAuth
         <div className="w-16 h-16 bg-red-100 border border-red-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
           <Shield className="w-8 h-8 text-red-600" />
         </div>
-        <h1 className="text-3xl font-black text-slate-900">Coast Guard Command Portal</h1>
-        <p className="text-slate-600 text-sm mt-1">Restricted Tactical Access · Defense Systems</p>
+        <h1 className="text-3xl font-black text-slate-900">{t('auth.cgLoginTitle')}</h1>
+        <p className="text-slate-600 text-sm mt-1">{t('auth.cgSubtitle')}</p>
       </div>
 
       <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-3xl backdrop-blur-xl shadow-2xl relative z-10">

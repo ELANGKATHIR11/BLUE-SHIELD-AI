@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import FishermanLogin from '../components/FishermanLogin';
 import RegistrationForm from '../components/RegistrationForm';
 import { Waves, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface FishermanLoginPageProps {
   onLogin: (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => void;
@@ -11,6 +12,7 @@ interface FishermanLoginPageProps {
 export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleLoginSuccess = (aisId: string, boatId: string, fishermanName: string, contactInfo: string) => {
     onLogin(aisId, boatId, fishermanName, contactInfo);
@@ -23,16 +25,16 @@ export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin 
       <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
         <Link to="/roles" className="flex items-center gap-2 text-slate-700 hover:text-blue-900 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-colors text-sm font-semibold">
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Roles</span>
+          <span>{t('nav.backToRoles')}</span>
         </Link>
       </div>
 
       <div className="text-center mb-8 relative z-10">
         <div className="flex items-center justify-center mb-3">
           <Waves className="h-12 w-12 text-blue-600 mr-3 animate-pulse" />
-          <h1 className="text-4xl font-extrabold text-blue-950 tracking-tight">BLUE SHIELD AI</h1>
+          <h1 className="text-4xl font-extrabold text-blue-950 tracking-tight">{t('nav.brand')}</h1>
         </div>
-        <p className="text-slate-600 font-medium">Fisherman Access Portal (மீனவர் பாதுகாப்பு தளம்)</p>
+        <p className="text-slate-600 font-medium">{t('auth.fishermanAccess')}</p>
       </div>
 
       <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-3xl backdrop-blur-xl shadow-2xl relative z-10">
@@ -43,7 +45,7 @@ export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin 
               mode === 'login' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:text-blue-900'
             }`}
           >
-            Fisherman Login
+            {t('auth.fishermanLogin')}
           </button>
           <button
             onClick={() => setMode('register')}
@@ -51,7 +53,7 @@ export const FishermanLoginPage: React.FC<FishermanLoginPageProps> = ({ onLogin 
               mode === 'register' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:text-blue-900'
             }`}
           >
-            Register Boat
+            {t('auth.registerBoat')}
           </button>
         </div>
 

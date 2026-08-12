@@ -24,13 +24,37 @@ import {
 import { Shield } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-// Ensure Leaflet's zoom controls and tiles are never clipped
+// Ensure Leaflet's zoom controls and tiles are never clipped and have high touch ergonomics
 const leafletFixStyle = document.createElement("style");
 leafletFixStyle.textContent = `
   .leaflet-container { z-index: 0; }
   .leaflet-control-container { z-index: 1000 !important; }
   .leaflet-pane { z-index: 400; }
   .leaflet-top, .leaflet-bottom { z-index: 1000 !important; }
+  .leaflet-touch .leaflet-bar a, .leaflet-control-zoom a, .leaflet-bar a {
+    width: 48px !important;
+    height: 48px !important;
+    line-height: 48px !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    touch-action: manipulation !important;
+  }
+  .leaflet-control-zoom {
+    border: none !important;
+    margin: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .leaflet-bar {
+    border: none !important;
+    box-shadow: none !important;
+  }
 `;
 if (!document.getElementById("leaflet-fix")) {
   leafletFixStyle.id = "leaflet-fix";

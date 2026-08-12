@@ -3,7 +3,7 @@ import { Satellite, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { getGeolocationErrorMessage, checkGeolocationSupport } from '../utils/geolocationDebug';
 
 interface LocationTrackerProps {
-  onLocationUpdate: (lat: number, lng: number) => void;
+  onLocationUpdate: (lat: number, lng: number, speed?: number, heading?: number) => void;
   isTracking: boolean;
 }
 
@@ -26,15 +26,24 @@ const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isT
       return;
     }
 
-    // 5-Second Interval Live GPS Polling for ML Model Inference
+    // High-accuracy live system GPS fetch & watch
+    const processPosition = (position: GeolocationPosition) => {
+      setLocationStatus('granted');
+      setAccuracy(position.coords.accuracy);
+      setLastUpdate(Date.now());
+      const speedKnots = position.coords.speed !== null ? position.coords.speed * 1.94384 : 0;
+      const headingDeg = position.coords.heading !== null ? position.coords.heading : 0;
+      onLocationUpdateRef.current(
+        position.coords.latitude,
+        position.coords.longitude,
+        speedKnots,
+        headingDeg
+      );
+    };
+
     const fetchLiveGPS = () => {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocationStatus('granted');
-          setAccuracy(position.coords.accuracy);
-          setLastUpdate(Date.now());
-          onLocationUpdateRef.current(position.coords.latitude, position.coords.longitude);
-        },
+        processPosition,
         (error) => {
           const msg = getGeolocationErrorMessage(error);
           setErrorMessage(msg);
@@ -45,9 +54,17 @@ const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isT
     };
 
     fetchLiveGPS();
+    const watchId = navigator.geolocation.watchPosition(
+      processPosition,
+      (error) => console.warn('GPS Watch warning:', error),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
     const intervalId = setInterval(fetchLiveGPS, 5000);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      clearInterval(intervalId);
+      navigator.geolocation.clearWatch(watchId);
+    };
   }, [isTracking]);
 
   return (

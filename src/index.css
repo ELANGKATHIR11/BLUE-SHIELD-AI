@@ -112,3 +112,48 @@
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
+/* Touch Ergonomics: Leaflet Zoom & Map Controls for Touchscreen/Tablets */
+.leaflet-touch .leaflet-bar a,
+.leaflet-control-zoom a,
+.leaflet-bar a {
+  width: 48px !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  transition: all 0.2s ease-in-out !important;
+  touch-action: manipulation !important;
+}
+
+.leaflet-touch .leaflet-bar a:hover,
+.leaflet-touch .leaflet-bar a:active,
+.leaflet-control-zoom a:hover,
+.leaflet-control-zoom a:active,
+.leaflet-bar a:hover,
+.leaflet-bar a:active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  transform: scale(1.08);
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  margin: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.leaflet-bar {
+  border: none !important;
+  box-shadow: none !important;
+}
+

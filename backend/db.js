@@ -32,36 +32,43 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         zone_id VARCHAR(50) UNIQUE NOT NULL,
         name VARCHAR(100),
-        geom GEOMETRY(Polygon, 4326) NOT NULL
+        geom GEOMETRY(Geometry, 4326) NOT NULL
       );
     `);
-    console.log('✅ PostgreSQL tables created.');
+    
+    // Ensure geom column type supports MultiPolygon if table existed previously
+    await db.none('ALTER TABLE prohibited_zones ALTER COLUMN geom TYPE GEOMETRY(Geometry, 4326);').catch(() => {});
+    console.log('✅ PostgreSQL tables created/verified.');
 
     // 3. Seed prohibited zones from simplified GeoJSON if empty
     const zoneCount = await db.one('SELECT count(*)::int FROM prohibited_zones;');
     if (zoneCount.count === 0) {
       console.log('🌱 Seeding prohibited zones table from local GeoJSON...');
-      const simplifiedPath = path.resolve('../project/public/data/gis/simplified/sri_lanka_eez_simplified.geojson');
-      if (fs.existsSync(simplifiedPath)) {
+      const possiblePaths = [
+        path.resolve('./public/data/gis/simplified/sri_lanka_eez_simplified.geojson'),
+        path.resolve('../public/data/gis/simplified/sri_lanka_eez_simplified.geojson'),
+        path.resolve('../project/public/data/gis/simplified/sri_lanka_eez_simplified.geojson')
+      ];
+      const simplifiedPath = possiblePaths.find(p => fs.existsSync(p));
+      if (simplifiedPath) {
         const geojsonData = JSON.parse(fs.readFileSync(simplifiedPath, 'utf8'));
         for (const feature of geojsonData.features) {
-          const zoneId = feature.properties.mrgid || Math.random().toString(36).substr(2, 9);
-          const name = feature.properties.geoname || 'Sri Lankan EEZ';
+          const zoneId = (feature.properties?.mrgid || feature.properties?.MRGID || Math.random().toString(36).substr(2, 9)).toString();
+          const name = feature.properties?.geoname || feature.properties?.GEONAME || 'Sri Lankan EEZ';
           
-          // Only support Polygon types for this simple seed
-          if (feature.geometry.type === 'Polygon') {
-            const coords = feature.geometry.coordinates[0];
-            const wktCoords = coords.map(c => `${c[0]} ${c[1]}`).join(', ');
-            const wktPolygon = `POLYGON((${wktCoords}))`;
+          if (feature.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+            const geomJson = JSON.stringify(feature.geometry);
             
             await db.none(`
               INSERT INTO prohibited_zones (zone_id, name, geom)
-              VALUES ($1, $2, ST_GeomFromText($3, 4326))
+              VALUES ($1, $2, ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON($3), 4326)))
               ON CONFLICT (zone_id) DO NOTHING;
-            `, [zoneId.toString(), name, wktPolygon]);
+            `, [zoneId, name, geomJson]);
           }
         }
-        console.log('✅ Prohibited zones seeded successfully.');
+        console.log('✅ Prohibited zones seeded successfully into PostGIS.');
+      } else {
+        console.warn('⚠️ GeoJSON file not found for seeding PostGIS zones.');
       }
     }
   } catch (error) {

@@ -4,7 +4,6 @@ import RiskScoreBoard from '../components/RiskScoreBoard';
 import CoastGuardVesselStatus from '../components/CoastGuardVesselStatus';
 import CoastGuardLocationTracker from '../components/CoastGuardLocationTracker';
 import AlertSystem from '../components/AlertSystem';
-import DigitalTwinPanel from '../components/DigitalTwinPanel';
 import { BoatData, CoastGuardVessel, Alert } from '../App';
 
 interface CoastGuardTrackingPageProps {
@@ -50,7 +49,6 @@ export const CoastGuardTrackingPage: React.FC<CoastGuardTrackingPageProps> = ({
             onTrackingToggle={toggleCoastGuardTracking}
           />
           <AlertSystem alerts={alerts} />
-          <DigitalTwinPanel />
         </div>
       </div>
     </div>
