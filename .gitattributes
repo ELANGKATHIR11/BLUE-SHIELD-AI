@@ -1,0 +1,11 @@
+# GitHub Linguist Overrides
+# Treat generated/test HTML reports as documentation so they don't skew language statistics
+playwright-report/** linguist-documentation
+playwright-report/** linguist-vendored
+*.html linguist-detectable=false
+index.html linguist-detectable=true
+
+# Ensure Python ML pipelines, training routines, and models are fully recognized
+ml/** linguist-detectable=true
+*.py linguist-detectable=true
+*.py linguist-language=Python

@@ -1,0 +1,21 @@
+{
+  "model_path": "models/vessel_behavior_model.h5",
+  "scaler_path": "models/vessel_behavior_model_scaler.pkl",
+  "created_at": "2025-12-19T21:33:21.922126",
+  "input_features": [
+    "speed",
+    "heading",
+    "speed_change",
+    "heading_change",
+    "distance_moved",
+    "time_delta",
+    "hour_of_day",
+    "day_of_week"
+  ],
+  "output_classes": {
+    "0": "safe",
+    "1": "warning",
+    "2": "danger"
+  },
+  "model_version": "1.0.0"
+}

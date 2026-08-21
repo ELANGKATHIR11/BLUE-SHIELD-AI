@@ -20,7 +20,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     watch: {
-      ignored: ['**/dist/**', '**/*.geojson', '**/.git/**']
+      ignored: ['**/dist/**', '**/*.geojson', '**/.git/**', '**/ml/**', '**/*.h5', '**/*.pkl']
     }
   },
   optimizeDeps: {

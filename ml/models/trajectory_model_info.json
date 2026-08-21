@@ -1,0 +1,11 @@
+{
+  "trained_at": "2025-12-19T19:40:36.876176",
+  "model_architecture": "LSTM (128->64->32)",
+  "sequence_length": 10,
+  "prediction_horizon_minutes": 15,
+  "training_epochs": 34,
+  "final_training_loss": 0.25562459230422974,
+  "final_validation_loss": 0.23050528764724731,
+  "test_avg_error_km": 93.39939814056086,
+  "test_avg_confidence": 0.9977079033851624
+}
