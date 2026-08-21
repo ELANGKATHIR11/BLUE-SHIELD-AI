@@ -1,115 +1,145 @@
-# 🛡️ Blue Shield AI — Coast Guard Monitoring & GIS Spatial Engine
+# 🛡️ Blue Shield AI (MarOS™) — Next-Gen Maritime Safety & AI Geofence System
 
-A premium, state-of-the-art real-time vessel monitoring, collision prevention, and communication system integrated with **PostgreSQL**, **PostGIS spatial intelligence**, **Firebase Firestore**, and **Lightweight GIS boundaries**.
+[![React](https://img.shields.io/badge/React-19.2.8-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.2.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-PostCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![PostGIS](https://img.shields.io/badge/PostGIS-Spatial%20DB-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net/)
+[![Language](https://img.shields.io/badge/Language-English%20%7C%20%E0%AE%A4%E0%AE%AE%E0%AE%BF%E0%AE%B4%E0%AF%8D-blue?style=for-the-badge)](#-bilingual-uiux--voice-ai-english--tamil)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg?style=for-the-badge)](#-proprietary-license)
 
-> [!WARNING]
-> **PROPRIETARY & CONFIDENTIAL LICENSE**
-> This project is strictly prohibited for public use. The source code, spatial datasets, backend models, and documentation belong exclusively to the repository owner (**ELANGKATHIR11**). Unauthorized copying, distribution, hosting, or modification is illegal under international intellectual property law.
+**Blue Shield AI** is an advanced Maritime Operating System (MarOS) designed to safeguard fishermen operating in sensitive border waters (Palk Strait / Indian Ocean) and provide real-time tactical surveillance for maritime defense forces (Indian Coast Guard).
 
 ---
 
-## 📐 Architecture Diagram
+## 📐 End-to-End System Architecture
 
 ```mermaid
-graph TD
-    subgraph Client [React SPA Frontend]
-        UI[Interactive Leaflet Map]
-        WT[Vessel Tracker & Kalman Filter]
-        AD[Anomaly Detector]
-        BA[Boundary Alerts Engine]
-        GEO[react-leaflet GeoJSON Layers]
+flowchart TB
+    subgraph Client [Frontend Workspace — React 19 + TypeScript + Vite]
+        direction TB
+        subgraph Portals [Dual Workspace Portals]
+            FP[Fisherman Safety Portal]
+            CG[Coast Guard Tactical Command]
+        end
+        
+        subgraph Engines [Edge AI & Geospatial Engines]
+            KF[Kalman Filter Trajectory Estimator]
+            LR[Logistic Regression Risk Engine]
+            AD[Neural Anomaly Detector]
+            GF[Spatial Geofence Checker]
+            LR_SIM[LoRa Telemetry Simulator & Buffer]
+        end
+
+        subgraph UX [Immersive Bilingual UI Layer]
+            LANG[Bilingual Engine: English | தமிழ்]
+            TTS[Bilingual TTS & Speech-to-Text]
+            MAP[HTML5 Canvas GIS Map / Leaflet]
+            A3D[3D Motion & Glassmorphism System]
+        end
     end
 
-    subgraph External [External Services]
-        FB[(Firebase Firestore DB)]
+    subgraph Cloud [Cloud & Telemetry Layer]
+        FS[(Firebase Firestore DB)]
+        GEMINI[Gemini Generative AI Engine]
     end
 
-    subgraph Backend [Express PostGIS Server]
-        API[Express Router]
-        DB[(PostgreSQL Database)]
-        GIS[PostGIS Spatial Queries]
+    subgraph Backend [Spatial PostGIS Backend API]
+        EXPRESS[Express API Gateway]
+        PG[(PostgreSQL + PostGIS)]
     end
 
-    UI -->|GPS Coordinates| WT
-    WT -->|Filtered Telemetry| API
-    WT -->|Filtered Telemetry| FB
-    BA -->|Fetch simplified borders| GEO
-    API -->|Insert logs / ST_Contains| DB
-    DB -->|Spatial calculations| GIS
-    GIS -->|EEZ Violations / Distance| API
-    API -->|Boundary Alarms| UI
+    FP -->|Live Device GPS| Engines
+    CG -->|Live Patrol GPS| Engines
+    Engines -->|Calculated Risk & Anomalies| UX
+    Engines -->|Real-time Subscriptions| FS
+    Engines -->|LoRa Fallback Packets| LR_SIM
+    Engines -->|Spatial Queries & Telemetry| EXPRESS
+    EXPRESS -->|ST_Contains / ST_Distance| PG
+    Engines -->|Contextual Analysis| GEMINI
 ```
 
 ---
 
-## 🚀 Key Systems & Core Features
+## ✨ Core Features & Technical Highlights
 
-### **1. PostGIS Spatial Database & Backend Integration**
-- **Spatial Schema Engine**: Custom Node.js Express server running at port `5000` connected to PostgreSQL + PostGIS.
-- **Real-Time Geofence Checks**: Uses PostGIS `ST_Contains` on polygons to check if coordinates violate borders, and `ST_Distance` to check distance.
-- **Dynamic Seeding**: Automatically checks/installs the `postgis` extension, creates spatial schemas, and seeds boundaries directly from WFS GeoJSON files on boot.
+### 1. 🌐 Full Bilingual UI/UX & Voice AI (English & தமிழ்)
+- **1-Click Dynamic Language Switch**: Instant full-application localization between **English** and **Tamil (தமிழ்)** across all dashboards, alerts, metrics, tables, and buttons without page reloads.
+- **Voice Dictation (Speech-to-Text)**: Automatically adapts microphone transcription language between `ta-IN` (Tamil) and `en-US` (English).
+- **Text-to-Speech (TTS Engine)**: Reads out voice dispatches and safety alerts in spoken Tamil or English.
 
-### **2. Premium GIS Map Integration**
-- **Lightweight Rendering**: Large 97 MB GIS shapefiles simplified/decimated down to lightweight GeoJSONs (e.g., 4.4 MB for Sri Lanka) to run instantly in browsers without thread lag.
-- **HTML5 Canvas Accelerated**: Leaflet's `preferCanvas={true}` enabled for ultra-smooth 60fps pan/zoom interactions.
-- **India-Near Regional Bounds**: Constrained maps to the Indian subcontinent ocean regions (`[[0.0, 60.0], [30.0, 100.0]]`) to focus operations.
-- **Adaptive Auto-Panning**: Custom thresholding disables auto-centering unless a vessel travels >20m, preventing annoying jitter.
+### 2. 🛰️ Real-Time System GPS Geolocation
+- **Direct Hardware Geolocation**: Integrates `navigator.geolocation.watchPosition` with high accuracy (`maximumAge: 0`) to stream real device coordinates for:
+  - **Fisherman Vessels**: Real-time speed (knots), heading, and distance-to-border monitoring.
+  - **Coast Guard Patrol Vessels**: Live tactical GPS plotting and tracking.
 
-### **3. Fisherman & Patrol Console**
-- **Fisherman Portal**: One-tap registration, live high-accuracy GPS telemetry synchronizations to both Firebase & PostGIS, and immediate visual warnings on crossing EEZs.
-- **Coast Guard Control Center**: Smart cluster modeling using DBSCAN, automatic patrol route setups, message dispatchers, and automated alarm systems.
+### 3. 🧠 4-Layer Edge AI Surveillance & Anti-Jitter Pipeline
+- **L1: Spatial Geofence Boundary Check**: Real-time Euclidean & polygonal distance calculations against the International Maritime Boundary Line (IMBL).
+- **L2: Kalman Filter Trajectory Predictor**: Noise reduction and rolling state estimation to forecast vessel pathing $N$ minutes ahead.
+- **L3: Machine Learning Risk Assessment**: Hand-tuned Logistic Regression and heuristic anomaly detection scoring (0–100%).
+- **L4: Gemini Generative AI Re-Analysis**: Context-aware bilingual safety recommendations.
+- **Pipeline Throttling**: Micro-delta coordinate and time throttling prevents frontend shuttering and flickering during rapid GPS polling.
 
----
+### 4. 🎨 3D Motion Design & Glassmorphism
+- **3D Perspective & Motion**: `perspective-1000`, 3D card tilts on hover (`cubic-bezier(0.175, 0.885, 0.32, 1.275)`), floating badges, radar sweeps, and frosted glass panels (`backdrop-filter: blur(16px)`).
 
-## 🛠️ Technical Stack
-
-- **Frontend**: React 18 + TypeScript + Vite
-- **Maps**: Leaflet + React-Leaflet (HTML5 Canvas rendering)
-- **Database (Cloud)**: Firebase Firestore (real-time subscriptions)
-- **Database (Spatial)**: PostgreSQL + PostGIS (Docker / Local)
-- **Backend API**: Node.js Express + pg-promise
-- **GIS Processing**: Python (Shapely + Decimation scripts)
+### 5. 📡 LoRa Telemetry & Store-and-Forward Buffer
+- **Hardware-Resilient Communications**: LoRa SX1278 (915MHz) simulator with AES-128-CTR encryption, packet compression, and offline store-and-forward caching when cellular coverage drops.
 
 ---
 
-## 📦 Deployment & Startup Instructions
+## 🛠️ Technology Stack
 
-### 1. Start the PostGIS Backend Server
-1. Navigate to the backend directory:
-   ```bash
-   cd project/backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Update database credentials in `.env`:
-   ```env
-   PORT=5000
-   DATABASE_URL=postgresql://postgres:Akilaarasu1!@localhost:5432/postgres
-   CORS_ORIGIN=http://localhost:5173
-   ```
-4. Start the server:
-   ```bash
-   npm run dev
-   ```
-
-### 2. Start the Frontend client
-1. Navigate to the client directory:
-   ```bash
-   cd project
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the dev server:
-   ```bash
-   npm run dev
-   ```
-4. Open the browser at [http://localhost:5173/](http://localhost:5173/).
+| Domain | Technologies |
+|---|---|
+| **Frontend Framework** | React 19 (`^19.2.8`), TypeScript 7, Vite 8 |
+| **Routing & State** | React Router v7 (`^7.18.2`), Context API, Custom Hooks |
+| **Styling & 3D Motion** | TailwindCSS, PostCSS, Custom 3D CSS Keyframes, Glassmorphism |
+| **Mapping & GIS** | Leaflet (`^1.9.4`), React-Leaflet (`^5.0.0`), HTML5 Canvas |
+| **Cloud & Realtime** | Firebase Firestore (`^12.17.1`), Firebase Auth, Google Generative AI |
+| **Spatial Database** | PostgreSQL 16 + PostGIS extension, pg-promise |
+| **Backend API** | Node.js, Express (`^4.19.2`), REST, CORS |
+| **Telemetry & Comms** | Web Audio API, Web Speech Recognition API, LoRa Packet Engine |
 
 ---
 
-## 🔒 License
-**PRIVATE LICENSE** — Prohibited for public distribution, replication, or hosting. All code belongs strictly to the repository owner **ELANGKATHIR11**.
+## 🚀 Quick Start Guide
+
+### Prerequisites
+- **Node.js**: v18+ or v20+
+- **NPM**: v9+
+
+### Installation & Local Run
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/ELANGKATHIR11/BLUE-SHIELD-AI.git
+cd BLUE-SHIELD-AI/finale/project
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npm run dev
+```
+
+Open [http://localhost:5173/](http://localhost:5173/) in your browser.
+
+### Production Build
+
+```bash
+npm run build
+npm run preview
+```
+
+---
+
+## 🔒 Proprietary License & Intellectual Property
+
+**COPYRIGHT (C) 2026 ELANGKATHIR11. ALL RIGHTS RESERVED.**
+
+This project, its source code, architecture, algorithms (Kalman filter spatial trajectory, bilingual voice telemetry dispatch, PostGIS border geofencing, and LoRa buffer mechanisms), datasets, and documentation are **strictly proprietary and confidential**.
+
+- Commercial duplication, distribution, reverse engineering, scraping, or modification is **strictly prohibited**.
+- The codebase belongs solely and exclusively to the author & inventor: **[Elangkathir](https://github.com/ELANGKATHIR11)**.
