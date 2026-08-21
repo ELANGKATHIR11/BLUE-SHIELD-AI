@@ -17,47 +17,47 @@
 
 ```mermaid
 flowchart TB
-    subgraph Client [Frontend Workspace — React 19 + TypeScript + Vite]
+    subgraph Client ["Frontend Workspace — React 19 + TypeScript + Vite"]
         direction TB
-        subgraph Portals [Dual Workspace Portals]
-            FP[Fisherman Safety Portal]
-            CG[Coast Guard Tactical Command]
+        subgraph Portals ["Dual Workspace Portals"]
+            FP["Fisherman Safety Portal"]
+            CG["Coast Guard Tactical Command"]
         end
         
-        subgraph Engines [Edge AI & Geospatial Engines]
-            KF[Kalman Filter Trajectory Estimator]
-            LR[Logistic Regression Risk Engine]
-            AD[Neural Anomaly Detector]
-            GF[Spatial Geofence Checker]
-            LR_SIM[LoRa Telemetry Simulator & Buffer]
+        subgraph Engines ["Edge AI & Geospatial Engines"]
+            KF["Kalman Filter Trajectory Estimator"]
+            LR["Logistic Regression Risk Engine"]
+            AD["Neural Anomaly Detector"]
+            GF["Spatial Geofence Checker"]
+            LR_SIM["LoRa Telemetry Simulator & Buffer"]
         end
 
-        subgraph UX [Immersive Bilingual UI Layer]
-            LANG[Bilingual Engine: English | தமிழ்]
-            TTS[Bilingual TTS & Speech-to-Text]
-            MAP[HTML5 Canvas GIS Map / Leaflet]
-            A3D[3D Motion & Glassmorphism System]
+        subgraph UX ["Immersive Bilingual UI Layer"]
+            LANG["Bilingual Engine: English and Tamil"]
+            TTS["Bilingual TTS & Speech-to-Text"]
+            MAP["HTML5 Canvas GIS Map / Leaflet"]
+            A3D["3D Motion & Glassmorphism System"]
         end
     end
 
-    subgraph Cloud [Cloud & Telemetry Layer]
-        FS[(Firebase Firestore DB)]
-        GEMINI[Gemini Generative AI Engine]
+    subgraph Cloud ["Cloud & Telemetry Layer"]
+        FS[("Firebase Firestore DB")]
+        GEMINI["Gemini Generative AI Engine"]
     end
 
-    subgraph Backend [Spatial PostGIS Backend API]
-        EXPRESS[Express API Gateway]
-        PG[(PostgreSQL + PostGIS)]
+    subgraph Backend ["Spatial PostGIS Backend API"]
+        EXPRESS["Express API Gateway"]
+        PG[("PostgreSQL + PostGIS")]
     end
 
-    FP -->|Live Device GPS| Engines
-    CG -->|Live Patrol GPS| Engines
-    Engines -->|Calculated Risk & Anomalies| UX
-    Engines -->|Real-time Subscriptions| FS
-    Engines -->|LoRa Fallback Packets| LR_SIM
-    Engines -->|Spatial Queries & Telemetry| EXPRESS
-    EXPRESS -->|ST_Contains / ST_Distance| PG
-    Engines -->|Contextual Analysis| GEMINI
+    FP -->|"Live Device GPS"| Engines
+    CG -->|"Live Patrol GPS"| Engines
+    Engines -->|"Calculated Risk & Anomalies"| UX
+    Engines -->|"Real-time Subscriptions"| FS
+    Engines -->|"LoRa Fallback Packets"| LR_SIM
+    Engines -->|"Spatial Queries & Telemetry"| EXPRESS
+    EXPRESS -->|"ST_Contains / ST_Distance"| PG
+    Engines -->|"Contextual Analysis"| GEMINI
 ```
 
 ---
