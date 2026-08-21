@@ -51,23 +51,23 @@ export const RoleSelectionPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl perspective-1000">
           {/* Fisherman Portal Card */}
           <Link
             to="/fisherman/login"
-            className="group bg-white border-2 border-blue-100 hover:border-blue-500 p-8 rounded-3xl transition-all duration-300 shadow-xl hover:shadow-blue-500/10 flex flex-col justify-between"
+            className="group glass-morphism border-2 border-blue-100/80 hover:border-blue-500 p-8 rounded-3xl transition-all duration-300 shadow-xl card-3d-hover flex flex-col justify-between"
           >
             <div>
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-inner">
                 <Anchor className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold text-blue-950 mb-2">{t('nav.fishermanPortal')}</h3>
-              <p className="text-slate-600 text-sm leading-relaxed mb-6">
+              <h3 className="text-2xl font-black text-blue-950 mb-2">{t('nav.fishermanPortal')}</h3>
+              <p className="text-slate-600 text-sm leading-relaxed mb-6 font-medium">
                 {t('nav.fishermanDesc')}
               </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-bold text-blue-600">
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-extrabold text-blue-600">
               <span>{t('nav.enterFisherman')}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
             </div>
@@ -76,19 +76,19 @@ export const RoleSelectionPage: React.FC = () => {
           {/* Coast Guard Portal Card */}
           <Link
             to="/coastguard/login"
-            className="group bg-white border-2 border-blue-100 hover:border-red-500 p-8 rounded-3xl transition-all duration-300 shadow-xl hover:shadow-red-500/10 flex flex-col justify-between"
+            className="group glass-morphism border-2 border-blue-100/80 hover:border-red-500 p-8 rounded-3xl transition-all duration-300 shadow-xl card-3d-hover flex flex-col justify-between"
           >
             <div>
-              <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300 shadow-inner">
                 <Shield className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="text-2xl font-bold text-blue-950 mb-2">{t('nav.coastGuardPortal')}</h3>
-              <p className="text-slate-600 text-sm leading-relaxed mb-6">
+              <h3 className="text-2xl font-black text-blue-950 mb-2">{t('nav.coastGuardPortal')}</h3>
+              <p className="text-slate-600 text-sm leading-relaxed mb-6 font-medium">
                 {t('nav.coastGuardDesc')}
               </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-bold text-red-600">
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between font-extrabold text-red-600">
               <span>{t('nav.enterCoastGuard')}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
             </div>

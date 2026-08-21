@@ -129,22 +129,31 @@ function App() {
       setCoastGuardVessel(cgVessel);
       setIsCoastGuardTracking(true);
 
-      // Auto start live GPS tracking for Coast Guard
+      // Auto start continuous live GPS tracking for Coast Guard
+      let watchId: number | null = null;
       if (navigator.geolocation) {
+        const updateFromPos = (pos: GeolocationPosition) => {
+          const speed = pos.coords.speed !== null ? pos.coords.speed * 1.94384 : 0;
+          const heading = pos.coords.heading !== null ? pos.coords.heading : 0;
+          setCoastGuardVessel(prev => prev ? {
+            ...prev,
+            location: { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: Date.now() },
+            speed,
+            heading,
+            lastUpdate: Date.now()
+          } : null);
+        };
+
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const speed = pos.coords.speed !== null ? pos.coords.speed * 1.94384 : 0;
-            const heading = pos.coords.heading !== null ? pos.coords.heading : 0;
-            setCoastGuardVessel(prev => prev ? {
-              ...prev,
-              location: { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: Date.now() },
-              speed,
-              heading,
-              lastUpdate: Date.now()
-            } : null);
-          },
+          updateFromPos,
           (err) => console.warn('Coast guard live GPS initial error:', err),
-          { enableHighAccuracy: true, timeout: 5000 }
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+
+        watchId = navigator.geolocation.watchPosition(
+          updateFromPos,
+          (err) => console.warn('Coast guard live GPS watch error:', err),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       }
 
@@ -161,7 +170,10 @@ function App() {
         setAllBoats(liveVesselsOnly);
       });
 
-      return () => unsubscribe();
+      return () => {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        unsubscribe();
+      };
     }
   }, [isCGAuthenticated]);
 

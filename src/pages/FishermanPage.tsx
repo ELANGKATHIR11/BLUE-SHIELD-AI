@@ -12,7 +12,7 @@
  *    TO COPY, MODIFY, SCRAPE, OR ALTER THIS CODEBASE WITHOUT EXPLICIT PERMISSION.
  * ============================================================================
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import WorldMap from '../components/WorldMap';
 import Dashboard from '../components/Dashboard';
 import FishermanMessaging from '../components/FishermanMessaging';
@@ -55,14 +55,22 @@ export const FishermanPage: React.FC<FishermanPageProps> = ({
   useEffect(() => {
     if (!isTracking) return;
     if (navigator.geolocation) {
+      const updateFromPosition = (pos: GeolocationPosition) => {
+        const speed = pos.coords.speed !== null ? pos.coords.speed * 1.94384 : 0;
+        const heading = pos.coords.heading !== null ? pos.coords.heading : 0;
+        updateLocation(pos.coords.latitude, pos.coords.longitude, speed, heading);
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        updateFromPosition,
+        (err) => console.warn('Initial Fisherman GPS error:', err),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+
       const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          const speed = pos.coords.speed !== null ? pos.coords.speed * 1.94384 : 0;
-          const heading = pos.coords.heading !== null ? pos.coords.heading : 0;
-          updateLocation(pos.coords.latitude, pos.coords.longitude, speed, heading);
-        },
+        updateFromPosition,
         (err) => console.warn('Fisherman live GPS watch note:', err),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }

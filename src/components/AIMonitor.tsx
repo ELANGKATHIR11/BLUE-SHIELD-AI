@@ -12,7 +12,7 @@
  *    TO COPY, MODIFY, SCRAPE, OR ALTER THIS CODEBASE WITHOUT EXPLICIT PERMISSION.
  * ============================================================================
  */
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Brain, Shield, Activity, Navigation, Gauge, MapPin, Volume2, MessageSquare, AlertTriangle } from 'lucide-react';
 import { BoatData, Alert } from '../App';
 import { checkGeofence, type GeofenceResult, type AlertLevel } from '../engines/geofence';
@@ -45,23 +45,30 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
   // Kalman tracker ref — persists across renders
   const trackerRef = useRef<VesselTracker>(new VesselTracker());
 
-  // Track last alert level to avoid duplicate alerts
+  // Track last alert level and position to prevent rapid re-render shutter
   const lastAlertLevelRef = useRef<AlertLevel>('safe');
+  const lastLocationRef = useRef<{ lat: number; lng: number; time: number }>({ lat: 0, lng: 0, time: 0 });
 
   // Activate Audio Alerts Hook
   useAudioAlert(boatData?.status || 'safe');
 
   /**
-   * CORE ENGINE PIPELINE — runs on every GPS update
-   * 1. Geofence check (deterministic)
-   * 2. Kalman filter update + trajectory prediction
-   * 3. Risk model scoring
-   * 4. Gemini explanation (only if alert level changes)
+   * CORE ENGINE PIPELINE — runs on meaningful GPS updates
    */
   const runEnginePipeline = useCallback(async (data: BoatData) => {
-    setIsAnalyzing(true);
     const position = { lat: data.location.lat, lng: data.location.lng };
     const timestamp = data.location.timestamp || Date.now();
+
+    // Prevent stutter: Only run pipeline if at least 1500ms passed OR position moved > ~2m
+    const timeDelta = timestamp - lastLocationRef.current.time;
+    const latDelta = Math.abs(position.lat - lastLocationRef.current.lat);
+    const lngDelta = Math.abs(position.lng - lastLocationRef.current.lng);
+    if (timeDelta < 1500 && latDelta < 0.00002 && lngDelta < 0.00002) {
+      return;
+    }
+    lastLocationRef.current = { lat: position.lat, lng: position.lng, time: timestamp };
+
+    setIsAnalyzing(true);
 
     try {
       // === LAYER 1: Deterministic Geofence ===
@@ -110,8 +117,6 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
 
       // === AUTOMATIC THREAT TRANSMISSION TO COAST GUARD IF RISK >= 90% (0.90) ===
       if (computedRiskProbability >= 0.90 || geoResult.isInForbiddenZone) {
-        const now = Date.now();
-        // Throttled threat transmission (every 60s per vessel)
         if (!lastAlertLevelRef.current || lastAlertLevelRef.current !== 'violation') {
           const riskPercentage = Math.round(computedRiskProbability * 100);
           const threatMessage = `🚨 CRITICAL THREAT: Vessel ${data.boatId} (${data.aisId}) has breached 90% risk threshold (Calculated: ${riskPercentage}%). Location: ${position.lat.toFixed(5)}°N, ${position.lng.toFixed(5)}°E, Speed: ${data.speed.toFixed(1)} kts, Operator: ${data.fishermanName || 'N/A'}, Phone: ${data.contactInfo || 'N/A'}`;
@@ -152,14 +157,12 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
         lastAlertLevelRef.current = finalAlertLevel;
 
         if (finalAlertLevel !== 'safe') {
-          // Fire immediate deterministic alert
           onAlert({
             type: finalAlertLevel === 'violation' ? 'danger' : finalAlertLevel === 'high_risk' ? 'danger' : 'warning',
             message: geoResult.statusMessage || risk.riskFactors[0],
             zone: 'IMBL - Palk Strait',
           });
 
-          // === LAYER 4: Gemini for language (async, non-blocking) ===
           generateAlertExplanation({
             vesselId: data.aisId,
             boatName: data.boatId,
@@ -173,7 +176,6 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
             isViolation: geoResult.isInForbiddenZone,
             timestamp,
           }).then(setAlertMessage).catch(() => {
-            // Fallback to static
             setAlertMessage(getStaticAlert(finalAlertLevel));
           });
         } else {
@@ -182,7 +184,6 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
       }
     } catch (error) {
       console.error('Engine pipeline error:', error);
-      // Fallback: still try geofence at minimum
       const geoFallback = checkGeofence(position);
       setGeofenceResult(geoFallback);
       if (geoFallback.isInForbiddenZone) {
@@ -192,16 +193,15 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
     } finally {
       setIsAnalyzing(false);
     }
-  }, [onAlert, onStatusChange]);
+  }, [onAlert, onStatusChange, onRiskUpdate]);
 
-  // Run pipeline on boatData change (throttled to every update)
+  // Run pipeline on boatData change
   useEffect(() => {
     if (!boatData || (boatData.location.lat === 0 && boatData.location.lng === 0)) return;
     runEnginePipeline(boatData);
-  }, [boatData, runEnginePipeline]);
+  }, [boatData?.location.lat, boatData?.location.lng, boatData?.speed, boatData?.heading, runEnginePipeline]);
 
   // === RENDER ===
-
   if (!boatData) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -220,7 +220,7 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-50">
       {/* Header */}
-      <div className={`p-5 border-b ${
+      <div className={`p-5 border-b transition-colors duration-500 ${
         geofenceResult?.alertLevel === 'violation' ? 'bg-red-50 border-red-100' :
         geofenceResult?.alertLevel === 'high_risk' ? 'bg-orange-50 border-orange-100' :
         geofenceResult?.alertLevel === 'advisory' ? 'bg-yellow-50 border-yellow-100' :
@@ -282,7 +282,7 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
           </div>
           <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden border border-white/10">
             <div
-              className={`risk-progress-bar h-full transition-all duration-1000 ${
+              className={`risk-progress-bar h-full transition-all duration-700 ${
                 riskColor === 'red' ? 'bg-red-400' :
                 riskColor === 'yellow' ? 'bg-yellow-300' : 'bg-green-400'
               }`}

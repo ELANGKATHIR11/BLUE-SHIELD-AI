@@ -52,55 +52,68 @@ export const HomePage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 container mx-auto px-6 py-16 flex flex-col justify-center items-center text-center relative z-10">
+      <main className="flex-1 container mx-auto px-6 py-16 flex flex-col justify-center items-center text-center relative z-10 perspective-1000">
+        {/* Top 3D Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-morphism border border-blue-200 text-blue-800 text-xs font-extrabold uppercase tracking-widest mb-6 shadow-sm animate-float">
+          <Shield className="w-4 h-4 text-blue-600" />
+          <span>Next-Gen Maritime Neural Geofence</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </div>
+
         <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-blue-950 tracking-tight max-w-4xl leading-tight">
           {t('nav.heroTitle')}
         </h2>
 
-        <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl font-normal leading-relaxed">
+        <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl font-medium leading-relaxed">
           {t('nav.heroSubtitle')}
         </p>
 
         <div className="mt-10 flex flex-wrap gap-4 justify-center">
           <Link
             to="/roles"
-            className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl transition-all shadow-xl shadow-blue-600/20 flex items-center gap-3"
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white text-lg font-extrabold rounded-2xl transition-all shadow-xl shadow-blue-600/30 flex items-center gap-3 card-3d-hover"
           >
-            <Compass className="w-6 h-6" />
+            <Compass className="w-6 h-6 animate-spin" style={{ animationDuration: '10s' }} />
             <span>{t('nav.selectRoleButton')}</span>
           </Link>
 
           <Link
             to="/coastguard/tracking"
-            className="px-8 py-4 bg-white border border-blue-200 hover:bg-blue-50 text-blue-900 text-lg font-bold rounded-2xl transition-all flex items-center gap-3 shadow-sm"
+            className="px-8 py-4 bg-white/90 border border-blue-200 hover:bg-blue-50 text-blue-900 text-lg font-extrabold rounded-2xl transition-all flex items-center gap-3 shadow-md card-3d-hover"
           >
             <Activity className="w-6 h-6 text-blue-600" />
             <span>{t('nav.liveTracking')}</span>
           </Link>
         </div>
 
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 text-left w-full max-w-5xl">
-          <div className="bg-white border border-blue-100 p-8 rounded-3xl shadow-lg shadow-blue-900/5 backdrop-blur-md">
-            <Anchor className="w-10 h-10 text-blue-600 mb-4" />
+        {/* 3D Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 text-left w-full max-w-5xl transform-style-3d">
+          <div className="glass-morphism border border-blue-100 p-8 rounded-3xl shadow-lg card-3d-hover relative overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mb-5 text-blue-600 shadow-inner">
+              <Anchor className="w-6 h-6" />
+            </div>
             <h3 className="text-xl font-bold text-blue-950 mb-2">{t('nav.card1Title')}</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">
+            <p className="text-slate-600 text-sm leading-relaxed font-medium">
               {t('nav.card1Desc')}
             </p>
           </div>
 
-          <div className="bg-white border border-blue-100 p-8 rounded-3xl shadow-lg shadow-blue-900/5 backdrop-blur-md">
-            <Users className="w-10 h-10 text-emerald-600 mb-4" />
+          <div className="glass-morphism border border-blue-100 p-8 rounded-3xl shadow-lg card-3d-hover relative overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-5 text-emerald-600 shadow-inner">
+              <Users className="w-6 h-6" />
+            </div>
             <h3 className="text-xl font-bold text-blue-950 mb-2">{t('nav.card2Title')}</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">
+            <p className="text-slate-600 text-sm leading-relaxed font-medium">
               {t('nav.card2Desc')}
             </p>
           </div>
 
-          <div className="bg-white border border-blue-100 p-8 rounded-3xl shadow-lg shadow-blue-900/5 backdrop-blur-md">
-            <Activity className="w-10 h-10 text-amber-600 mb-4" />
+          <div className="glass-morphism border border-blue-100 p-8 rounded-3xl shadow-lg card-3d-hover relative overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-5 text-amber-600 shadow-inner">
+              <Activity className="w-6 h-6" />
+            </div>
             <h3 className="text-xl font-bold text-blue-950 mb-2">{t('nav.card3Title')}</h3>
-            <p className="text-slate-600 text-sm leading-relaxed">
+            <p className="text-slate-600 text-sm leading-relaxed font-medium">
               {t('nav.card3Desc')}
             </p>
           </div>

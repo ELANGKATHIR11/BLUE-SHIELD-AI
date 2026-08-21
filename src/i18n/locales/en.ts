@@ -230,6 +230,17 @@ export const en: TranslationDictionary = {
   'messaging.stopTTS': 'Stop Spoken Audio',
   'messaging.voiceNote': 'Voice Note Recording',
 
+  // Risk Scoreboard
+  'risk.composite': 'ML Threat Assessment & Drift Probability',
+  'risk.vessels': 'Vessels',
+  'risk.sort_label': 'SORT BY',
+  'risk.risk_label': 'RISK',
+  'risk.vessel_label': 'VESSEL',
+  'risk.status_label': 'STATUS',
+  'risk.speed_label': 'SPEED',
+  'risk.knots': 'kts',
+  'risk.anomaly': 'Anomaly',
+
   // Accessibility (a11y)
   'a11y.toggleLang': 'Switch language between English and Tamil',
   'a11y.zoomIn': 'Zoom in map',

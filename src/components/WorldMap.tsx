@@ -605,12 +605,11 @@ const WorldMap: React.FC<WorldMapProps> = ({
       .catch(err => console.error("Error loading Maldives EEZ:", err));
   }, []);
 
-  // Default center — Palk Strait (Tamil Nadu / Sri Lanka maritime boundary)
-  const defaultCenter: [number, number] = [
-    PALK_STRAIT_CONFIG.center.lat,
-    PALK_STRAIT_CONFIG.center.lng,
-  ];
-  const defaultZoom = PALK_STRAIT_CONFIG.zoom;
+  // Default center — Centered on current vessel if provided, or Palk Strait fallback
+  const defaultCenter: [number, number] = currentBoat?.location
+    ? [currentBoat.location.lat, currentBoat.location.lng]
+    : [PALK_STRAIT_CONFIG.center.lat, PALK_STRAIT_CONFIG.center.lng];
+  const defaultZoom = currentBoat?.location ? 13 : PALK_STRAIT_CONFIG.zoom;
 
   // Function to reset map view to optimal position
   const resetMapView = () => {
@@ -750,9 +749,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
           zoomAnimation={true}
           markerZoomAnimation={true}
           preferCanvas={true}
-          maxBounds={[[0.0, 60.0], [30.0, 100.0]]}
-          maxBoundsViscosity={1.0}
-          minZoom={4}
+          minZoom={2}
           style={{ height: "100%", width: "100%", background: "#0a192f" }}
           ref={mapRef}
         >

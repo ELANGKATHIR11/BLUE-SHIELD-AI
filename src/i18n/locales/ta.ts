@@ -230,6 +230,17 @@ export const ta: TranslationDictionary = {
   'messaging.stopTTS': 'ஒலியை நிறுத்து',
   'messaging.voiceNote': 'குரல் பதிவு செய்தி (Voice Note)',
 
+  // Risk Scoreboard
+  'risk.composite': 'ML அச்சுறுத்தல் மதிப்பீடு & சறுக்கல் நிகழ்தகவு',
+  'risk.vessels': 'படகுகள்',
+  'risk.sort_label': 'வரிசைப்படுத்து',
+  'risk.risk_label': 'ஆபத்து',
+  'risk.vessel_label': 'படகு',
+  'risk.status_label': 'நிலை',
+  'risk.speed_label': 'வேகம்',
+  'risk.knots': 'நாட்ஸ் (kts)',
+  'risk.anomaly': 'அசாதாரணம்',
+
   // Accessibility (a11y)
   'a11y.toggleLang': 'ஆங்கிலம் மற்றும் தமிழ் மொழிகளுக்கு இடையே மாற்றவும்',
   'a11y.zoomIn': 'வரைபடத்தைப் பெரிதாக்கவும்',
