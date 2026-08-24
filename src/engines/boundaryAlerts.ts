@@ -24,6 +24,7 @@ export interface BoundaryCheckResult {
   inMaldivesEEZ: boolean;
   alertLevel: 'safe' | 'warning' | 'danger';
   zoneName: string;
+  alertMessage?: string;
 }
 
 export interface GeoJSONGeometry {
@@ -141,16 +142,20 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
 
   let alertLevel: 'safe' | 'warning' | 'danger' = 'safe';
   let zoneName = 'Indian Waters';
+  let alertMessage = '';
 
   if (inSriLanka) {
     alertLevel = 'danger';
     zoneName = 'Sri Lankan EEZ (Forbidden)';
+    alertMessage = 'CRITICAL: Vessel detected inside Sri Lankan EEZ forbidden waters!';
   } else if (inMaldives) {
     alertLevel = 'danger';
     zoneName = 'Maldives EEZ (Forbidden)';
+    alertMessage = 'CRITICAL: Vessel detected inside Maldives EEZ forbidden waters!';
   } else if (inIndia || inAndaman) {
     alertLevel = 'safe';
     zoneName = inAndaman ? 'Andaman & Nicobar Waters' : 'Indian EEZ (Authorized)';
+    alertMessage = `Vessel located in authorized ${zoneName}.`;
   }
 
   return {
@@ -159,6 +164,7 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
     inSriLankaEEZ: inSriLanka,
     inMaldivesEEZ: inMaldives,
     alertLevel,
-    zoneName
+    zoneName,
+    alertMessage
   };
 }
