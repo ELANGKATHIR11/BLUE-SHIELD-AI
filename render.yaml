@@ -1,0 +1,30 @@
+services:
+  # 1. Node.js & Express API Backend
+  - type: web
+    name: blue-shield-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        value: https://blue-shield-ai.vercel.app
+      - key: FIREBASE_PROJECT_ID
+        value: blue-shield-live-101
+      - key: PYTHON_ML_URL
+        value: http://localhost:5001
+
+  # 2. Python ML Inference Service
+  - type: web
+    name: blue-shield-ml
+    runtime: python
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt || pip install flask flask-cors numpy shapely
+    startCommand: python app.py
+    envVars:
+      - key: PORT
+        value: 5001

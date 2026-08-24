@@ -26,16 +26,20 @@ class ZoneDetector:
         """Initialize zone detector with prohibited zones data"""
         # Load zones from JSON file
         zones_path = os.path.join(os.path.dirname(__file__), zones_file)
+        if not os.path.exists(zones_path):
+            zones_path = os.path.join(os.path.dirname(__file__), '../../datasets/indian_fishing_prohibited_zones.json')
+        
         with open(zones_path, 'r') as f:
             self.zones = json.load(f)
         
         # Create Shapely polygons for complex zones
         self.zone_polygons = {}
         for zone in self.zones:
-            if zone.get('polygon'):
+            zone_key = zone.get('zone_id') or zone.get('id')
+            if zone.get('polygon') and zone_key:
                 # Polygon coordinates in format [[lng, lat], ...]
                 coords = [(p[1], p[0]) for p in zone['polygon']]  # Swap to (lat, lng)
-                self.zone_polygons[zone['zone_id']] = Polygon(coords)
+                self.zone_polygons[zone_key] = Polygon(coords)
         
         print(f"✅ Loaded {len(self.zones)} prohibited zones")
         print(f"   📐 {len(self.zone_polygons)} zones with polygon boundaries")

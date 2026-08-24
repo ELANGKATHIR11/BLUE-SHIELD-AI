@@ -2,39 +2,50 @@
  * ============================================================================
  * PROPRIETARY AND CONFIDENTIAL — BLUE-SHIELD-AI™
  * COPYRIGHT (C) 2026. ALL RIGHTS RESERVED.
- *
- * OWNER & INVENTOR: Elangkathir (GitHub: https://github.com/ELANGKATHIR11)
- * 
- * NOTICE & RESTRICTIONS:
- * 1. COMMERCIAL USE, DUPLICATION, OR RE-DISTRIBUTION IS STRICTLY PROHIBITED.
- * 2. ONLY THE AUTHORIZED OWNER HOLDS ALL INTELLECTUAL PROPERTY & USAGE RIGHTS.
- * 3. NO AI CODING ASSISTANT, AUTOMATED AGENT, OR THIRD-PARTY MODEL IS PERMITTED
- *    TO COPY, MODIFY, SCRAPE, OR ALTER THIS CODEBASE WITHOUT EXPLICIT PERMISSION.
  * ============================================================================
  */
-import { GeoPoint } from '../data/palkStraitBoundary';
+
+export interface GeoPoint {
+  lat: number;
+  lng: number;
+}
 
 export interface BoundaryCheckResult {
   inIndiaEEZ: boolean;
-  inAndamanNicobarEEZ: boolean;
+  inAndamanEEZ: boolean;
   inSriLankaEEZ: boolean;
   inMaldivesEEZ: boolean;
   alertLevel: 'safe' | 'warning' | 'danger';
-  alertMessage: string;
+  zoneName: string;
 }
 
-// Helper: Point in simple polygon check ([lng, lat] coords)
-function isPointInGeoJSONPolygon(point: GeoPoint, polygon: number[][]): boolean {
-  let inside = false;
+export interface GeoJSONGeometry {
+  type: string;
+  coordinates: number[][][] | number[][][][];
+}
+
+export interface GeoJSONFeature {
+  type: string;
+  properties?: Record<string, unknown>;
+  geometry: GeoJSONGeometry;
+}
+
+export interface GeoJSONFeatureCollection {
+  type: string;
+  features: GeoJSONFeature[];
+}
+
+export function isPointInGeoJSONPolygon(point: GeoPoint, polygon: number[][]): boolean {
   const lat = point.lat;
   const lng = point.lng;
   const n = polygon.length;
+  let inside = false;
 
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = polygon[i][0]; // longitude
-    const yi = polygon[i][1]; // latitude
-    const xj = polygon[j][0]; // longitude
-    const yj = polygon[j][1]; // latitude
+    const xi = polygon[i][0];
+    const yi = polygon[i][1];
+    const xj = polygon[j][0];
+    const yj = polygon[j][1];
 
     const intersect = ((yi > lat) !== (yj > lat)) &&
         (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
@@ -43,14 +54,13 @@ function isPointInGeoJSONPolygon(point: GeoPoint, polygon: number[][]): boolean 
   return inside;
 }
 
-// Helper: Check if point is inside a Polygon or MultiPolygon geometry
-export function isPointInGeometry(point: GeoPoint, geometry: any): boolean {
+export function isPointInGeometry(point: GeoPoint, geometry: GeoJSONGeometry | null | undefined): boolean {
   if (!geometry || !geometry.coordinates) return false;
   
   if (geometry.type === 'Polygon') {
-    return isPointInGeoJSONPolygon(point, geometry.coordinates[0]);
+    return isPointInGeoJSONPolygon(point, (geometry.coordinates as number[][][])[0]);
   } else if (geometry.type === 'MultiPolygon') {
-    for (const polygonCoords of geometry.coordinates) {
+    for (const polygonCoords of (geometry.coordinates as number[][][][])) {
       if (polygonCoords && polygonCoords[0]) {
         if (isPointInGeoJSONPolygon(point, polygonCoords[0])) {
           return true;
@@ -61,36 +71,31 @@ export function isPointInGeometry(point: GeoPoint, geometry: any): boolean {
   return false;
 }
 
-// Cache for loaded GeoJSON features
-let indiaEEZData: any = null;
-let andamanEEZData: any = null;
-let sriLankaEEZData: any = null;
-let maldivesEEZData: any = null;
+let indiaEEZData: GeoJSONFeatureCollection | null = null;
+let andamanEEZData: GeoJSONFeatureCollection | null = null;
+let sriLankaEEZData: GeoJSONFeatureCollection | null = null;
+let maldivesEEZData: GeoJSONFeatureCollection | null = null;
 
-// Initialize and prefetch boundaries
 export async function initializeBoundaries(): Promise<void> {
   try {
     const fetchPromises = [
-      fetch('/data/gis/simplified/india_eez_simplified.geojson').then(r => r.json()).then(data => indiaEEZData = data),
-      fetch('/data/gis/simplified/andaman_nicobar_eez_simplified.geojson').then(r => r.json()).then(data => andamanEEZData = data),
-      fetch('/data/gis/simplified/sri_lanka_eez_simplified.geojson').then(r => r.json()).then(data => sriLankaEEZData = data),
-      fetch('/data/gis/simplified/maldives_eez_simplified.geojson').then(r => r.json()).then(data => maldivesEEZData = data),
+      fetch('/data/gis/simplified/india_eez_simplified.geojson').then(r => r.json()).then(data => { indiaEEZData = data; }),
+      fetch('/data/gis/simplified/andaman_nicobar_eez_simplified.geojson').then(r => r.json()).then(data => { andamanEEZData = data; }),
+      fetch('/data/gis/simplified/sri_lanka_eez_simplified.geojson').then(r => r.json()).then(data => { sriLankaEEZData = data; }),
+      fetch('/data/gis/simplified/maldives_eez_simplified.geojson').then(r => r.json()).then(data => { maldivesEEZData = data; }),
     ];
     await Promise.all(fetchPromises);
-    console.log('🌐 GIS Boundaries Loaded successfully!');
   } catch (error) {
-    console.error('⚠️ Failed to load GIS boundary GeoJSONs:', error);
+    console.warn('ℹ️ Boundary GeoJSON prefetch note:', error);
   }
 }
 
-// Primary extended geofence boundary checker
 export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckResult {
   let inIndia = false;
   let inAndaman = false;
   let inSriLanka = false;
   let inMaldives = false;
 
-  // Check India EEZ
   if (indiaEEZData && indiaEEZData.features) {
     for (const feature of indiaEEZData.features) {
       if (isPointInGeometry(position, feature.geometry)) {
@@ -100,7 +105,6 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
     }
   }
 
-  // Check Andaman EEZ
   if (andamanEEZData && andamanEEZData.features) {
     for (const feature of andamanEEZData.features) {
       if (isPointInGeometry(position, feature.geometry)) {
@@ -110,7 +114,6 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
     }
   }
 
-  // Check Sri Lanka EEZ (Prohibited/High-Risk crossing zone)
   if (sriLankaEEZData && sriLankaEEZData.features) {
     for (const feature of sriLankaEEZData.features) {
       if (isPointInGeometry(position, feature.geometry)) {
@@ -120,7 +123,6 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
     }
   }
 
-  // Check Maldives EEZ (Prohibited crossing zone)
   if (maldivesEEZData && maldivesEEZData.features) {
     for (const feature of maldivesEEZData.features) {
       if (isPointInGeometry(position, feature.geometry)) {
@@ -131,25 +133,25 @@ export function checkExtendedEEZBoundaries(position: GeoPoint): BoundaryCheckRes
   }
 
   let alertLevel: 'safe' | 'warning' | 'danger' = 'safe';
-  let alertMessage = 'Within safe Indian maritime zone';
+  let zoneName = 'Indian Waters';
 
   if (inSriLanka) {
     alertLevel = 'danger';
-    alertMessage = '⚠️ CRITICAL: Crossed into Sri Lankan Exclusive Economic Zone! Turn back immediately.';
+    zoneName = 'Sri Lankan EEZ (Forbidden)';
   } else if (inMaldives) {
     alertLevel = 'danger';
-    alertMessage = '⚠️ CRITICAL: Entered Maldives Exclusive Economic Zone! Turn back immediately.';
-  } else if (!inIndia && !inAndaman) {
-    alertLevel = 'warning';
-    alertMessage = '📋 NOTICE: Operating in International Waters (outside India EEZ).';
+    zoneName = 'Maldives EEZ (Forbidden)';
+  } else if (inIndia || inAndaman) {
+    alertLevel = 'safe';
+    zoneName = inAndaman ? 'Andaman & Nicobar Waters' : 'Indian EEZ (Authorized)';
   }
 
   return {
     inIndiaEEZ: inIndia,
-    inAndamanNicobarEEZ: inAndaman,
+    inAndamanEEZ: inAndaman,
     inSriLankaEEZ: inSriLanka,
     inMaldivesEEZ: inMaldives,
     alertLevel,
-    alertMessage
+    zoneName
   };
 }

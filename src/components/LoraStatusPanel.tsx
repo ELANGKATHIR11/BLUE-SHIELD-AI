@@ -2,14 +2,6 @@
  * ============================================================================
  * PROPRIETARY AND CONFIDENTIAL — BLUE-SHIELD-AI™
  * COPYRIGHT (C) 2026. ALL RIGHTS RESERVED.
- *
- * OWNER & INVENTOR: Elangkathir (GitHub: https://github.com/ELANGKATHIR11)
- * 
- * NOTICE & RESTRICTIONS:
- * 1. COMMERCIAL USE, DUPLICATION, OR RE-DISTRIBUTION IS STRICTLY PROHIBITED.
- * 2. ONLY THE AUTHORIZED OWNER HOLDS ALL INTELLECTUAL PROPERTY & USAGE RIGHTS.
- * 3. NO AI CODING ASSISTANT, AUTOMATED AGENT, OR THIRD-PARTY MODEL IS PERMITTED
- *    TO COPY, MODIFY, SCRAPE, OR ALTER THIS CODEBASE WITHOUT EXPLICIT PERMISSION.
  * ============================================================================
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -82,12 +74,17 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
     }
   }, [boatData, zoneFlag, anomalyFlag, isTransmitting]);
 
-  // Auto-transmit every 45 seconds
+  // Auto-transmit every 45 seconds (decoupled with setTimeout)
   useEffect(() => {
     if (!boatData) return;
-    transmit();
+    const timer = setTimeout(() => {
+      transmit();
+    }, 500);
     intervalRef.current = setInterval(transmit, 45_000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      clearTimeout(timer);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [boatData?.aisId, transmit, boatData]);
 
   useEffect(() => {
@@ -131,73 +128,87 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
       <div className="p-4 space-y-4">
         {/* Metrics Row */}
         <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: t('lora.packets'), value: stats?.totalPacketsSent ?? 0, icon: <Zap className="h-3.5 w-3.5 text-indigo-500" /> },
-            { label: t('lora.buffer'), value: bufferStats.pending, icon: <Database className="h-3.5 w-3.5 text-yellow-500" /> },
-            { label: t('lora.success'), value: stats ? `${Math.round((stats.successfulPackets / Math.max(stats.totalPacketsSent, 1)) * 100)}%` : '—', icon: <Signal className="h-3.5 w-3.5 text-green-500" /> },
-          ].map(m => (
-            <div key={m.label} className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-center">
-              <div className="flex items-center justify-center mb-1">{m.icon}</div>
-              <div className="font-mono text-base font-bold text-slate-800">{m.value}</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{m.label}</div>
-            </div>
-          ))}
+          <div className="bg-indigo-50 rounded-xl p-2.5 text-center border border-indigo-100">
+            <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">{t('lora.packets')}</div>
+            <div className="font-mono font-bold text-lg text-indigo-900">{stats?.totalPackets ?? 0}</div>
+            <div className="text-[9px] text-indigo-500">{stats?.successRate.toFixed(1) ?? '100'}% {t('lora.delivery')}</div>
+          </div>
+          <div className="bg-purple-50 rounded-xl p-2.5 text-center border border-purple-100">
+            <div className="text-[9px] font-bold text-purple-400 uppercase tracking-wider">{t('lora.compression')}</div>
+            <div className="font-mono font-bold text-lg text-purple-900">{stats?.avgCompressionRatio ?? '58'}%</div>
+            <div className="text-[9px] text-purple-500">Delta+Bitpack</div>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-200">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t('lora.buffer')}</div>
+            <div className="font-mono font-bold text-lg text-slate-800">{bufferStats.pending}</div>
+            <div className="text-[9px] text-slate-500">{t('lora.buffered')}</div>
+          </div>
         </div>
 
-        {/* Encryption badge */}
-        <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-          <Lock className="h-4 w-4 text-green-600 flex-shrink-0" />
-          <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">{t('lora.encrypted')} — AES-128-CTR · Pre-Shared Key</span>
-        </div>
-
-        {/* Last packet detail */}
-        {lastResult && (
-          <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100 text-xs space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-indigo-700 uppercase text-[10px] tracking-widest">{t('lora.last')}</span>
-              <span className={`flex items-center gap-1 font-bold text-[10px] ${lastResult.success ? 'text-green-600' : 'text-red-500'}`}>
-                {lastResult.success ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                {lastResult.success ? 'TX OK' : 'BUFFERED'}
+        {/* Security & Protocol Specs */}
+        <div className="bg-slate-900 rounded-xl p-3 text-white font-mono text-xs space-y-1.5">
+          <div className="flex items-center justify-between text-indigo-300">
+            <span className="flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-green-400" />
+              <span>{t('lora.encryption')}</span>
+            </span>
+            <span className="text-[10px] bg-green-900/60 text-green-300 px-2 py-0.5 rounded-full font-bold">AES-128-CBC</span>
+          </div>
+          <div className="flex items-center justify-between text-slate-400 text-[10px]">
+            <span>{t('lora.bandwidth')}</span>
+            <span className="text-white">125 kHz · CR 4/5</span>
+          </div>
+          <div className="flex items-center justify-between text-slate-400 text-[10px]">
+            <span>{t('lora.frequency')}</span>
+            <span className="text-white">915 MHz ISM (868/915 Dual-Band)</span>
+          </div>
+          {lastResult && (
+            <div className="flex items-center justify-between text-slate-400 text-[10px] pt-1 border-t border-slate-800">
+              <span>{t('lora.last_rssi')}</span>
+              <span className={lastResult.rssi > -100 ? 'text-green-400' : 'text-yellow-400'}>
+                {lastResult.rssi.toFixed(0)} dBm (SNR {lastResult.snr.toFixed(1)} dB)
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-slate-600">
-              <span>{t('lora.size')}: <b>{lastResult.packetSizeBytes}B</b></span>
-              <span>{t('lora.compressed')}: <b>{lastResult.compressedSizeBytes}B</b></span>
-              <span>RSSI: <b>{lastResult.rssi} dBm</b></span>
-              <span>Ratio: <b>{lastResult.compressionRatio.toFixed(1)}x</b></span>
-            </div>
-            <div className="text-[9px] font-mono text-slate-400 truncate">KEY: {lastResult.encryptedHex}</div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Packet Log */}
-        {log.length > 0 && (
-          <div className="space-y-1">
-            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Packet Log</h4>
-            {log.map(entry => (
-              <div key={entry.id} className="flex items-center gap-2 text-[10px] font-mono text-slate-600 bg-slate-50 rounded-lg px-3 py-1.5">
-                <span className={entry.success ? 'text-green-500' : 'text-red-400'}>{entry.success ? '✓' : '✗'}</span>
-                <span className="text-slate-400">{entry.time}</span>
-                <span className="ml-auto">{entry.rssi} dBm</span>
-                <span>{entry.size}→{entry.compressed}B</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Manual transmit button */}
+        {/* Manual Transmit Button */}
         <button
           onClick={transmit}
           disabled={isTransmitting || !boatData}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 rounded-xl transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-md ${
+            isTransmitting || !boatData
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-200 active:scale-98'
+          }`}
         >
-          {isTransmitting ? <><span className="animate-spin">⟳</span> Transmitting…</> : <><Radio className="h-3.5 w-3.5" /> {t('lora.transmit')}</>}
+          <Zap className={`h-3.5 w-3.5 ${isTransmitting ? 'animate-bounce' : ''}`} />
+          {isTransmitting ? t('lora.transmitting') : t('lora.transmit_btn')}
         </button>
 
-        <button onClick={() => { resetLoRaStats(); setStats(getLoRaStats()); setLog([]); }}
-          className="w-full text-[9px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">
-          Reset Stats
-        </button>
+        {/* Transmission Log */}
+        {log.length > 0 && (
+          <div>
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+              <span>{t('lora.log_title')}</span>
+              <button onClick={() => { resetLoRaStats(); setStats(getLoRaStats()); setLog([]); }} className="text-indigo-500 hover:underline">
+                {t('lora.reset')}
+              </button>
+            </div>
+            <div className="space-y-1 max-h-32 overflow-y-auto font-mono text-[10px]">
+              {log.map(item => (
+                <div key={item.id} className={`flex items-center justify-between p-1.5 rounded-lg ${item.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                  <span className="flex items-center gap-1">
+                    {item.success ? <CheckCircle className="h-3 w-3 text-green-500" /> : <XCircle className="h-3 w-3 text-red-500" />}
+                    <span>{item.time}</span>
+                  </span>
+                  <span>{item.compressed}B ({item.size}B raw)</span>
+                  <span>{item.rssi.toFixed(0)} dBm</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

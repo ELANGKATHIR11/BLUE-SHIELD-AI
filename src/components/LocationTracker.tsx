@@ -2,14 +2,6 @@
  * ============================================================================
  * PROPRIETARY AND CONFIDENTIAL — BLUE-SHIELD-AI™
  * COPYRIGHT (C) 2026. ALL RIGHTS RESERVED.
- *
- * OWNER & INVENTOR: Elangkathir (GitHub: https://github.com/ELANGKATHIR11)
- * 
- * NOTICE & RESTRICTIONS:
- * 1. COMMERCIAL USE, DUPLICATION, OR RE-DISTRIBUTION IS STRICTLY PROHIBITED.
- * 2. ONLY THE AUTHORIZED OWNER HOLDS ALL INTELLECTUAL PROPERTY & USAGE RIGHTS.
- * 3. NO AI CODING ASSISTANT, AUTOMATED AGENT, OR THIRD-PARTY MODEL IS PERMITTED
- *    TO COPY, MODIFY, SCRAPE, OR ALTER THIS CODEBASE WITHOUT EXPLICIT PERMISSION.
  * ============================================================================
  */
 import React, { useState, useEffect, useRef } from 'react';
@@ -24,27 +16,30 @@ interface LocationTrackerProps {
 const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isTracking }) => {
   const [locationStatus, setLocationStatus] = useState<'requesting' | 'granted' | 'denied' | 'unavailable' | 'timeout'>('requesting');
   const [accuracy, setAccuracy] = useState<number>(0);
-  const [lastUpdate, setLastUpdate] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  
+  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
   const onLocationUpdateRef = useRef(onLocationUpdate);
-  onLocationUpdateRef.current = onLocationUpdate;
+
+  useEffect(() => {
+    onLocationUpdateRef.current = onLocationUpdate;
+  }, [onLocationUpdate]);
 
   useEffect(() => {
     if (!isTracking) return;
 
     const support = checkGeolocationSupport();
     if (!support.supported) {
-      setLocationStatus('unavailable');
-      setErrorMessage(support.message);
-      return;
+      const timer = setTimeout(() => {
+        setLocationStatus('unavailable');
+        setErrorMessage(support.message);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
-    // High-accuracy live system GPS fetch & watch
     const processPosition = (position: GeolocationPosition) => {
       setLocationStatus('granted');
       setAccuracy(position.coords.accuracy);
-      setLastUpdate(Date.now());
+      setSecondsAgo(0);
       const speedKnots = position.coords.speed !== null ? position.coords.speed * 1.94384 : 0;
       const headingDeg = position.coords.heading !== null ? position.coords.heading : 0;
       onLocationUpdateRef.current(
@@ -55,29 +50,23 @@ const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isT
       );
     };
 
-    const fetchLiveGPS = () => {
-      navigator.geolocation.getCurrentPosition(
-        processPosition,
-        (error) => {
-          const msg = getGeolocationErrorMessage(error);
-          setErrorMessage(msg);
-          setLocationStatus(error.code === 3 ? 'timeout' : error.code === 1 ? 'denied' : 'unavailable');
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    };
-
-    fetchLiveGPS();
     const watchId = navigator.geolocation.watchPosition(
       processPosition,
-      (error) => console.warn('GPS Watch warning:', error),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      (error) => {
+        const msg = getGeolocationErrorMessage(error);
+        setErrorMessage(msg);
+        setLocationStatus(error.code === 3 ? 'timeout' : error.code === 1 ? 'denied' : 'unavailable');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-    const intervalId = setInterval(fetchLiveGPS, 5000);
+
+    const ticker = setInterval(() => {
+      setSecondsAgo(prev => (prev !== null ? prev + 1 : null));
+    }, 1000);
 
     return () => {
-      clearInterval(intervalId);
       navigator.geolocation.clearWatch(watchId);
+      clearInterval(ticker);
     };
   }, [isTracking]);
 
@@ -112,7 +101,7 @@ const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isT
             <Satellite className="h-5 w-5 text-white mx-auto mb-2 opacity-90 group-hover:scale-110 transition-transform" />
             <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider mb-1">ML Pipeline Sync</div>
             <div className="font-mono text-sm font-bold text-white tracking-tight">
-              {lastUpdate > 0 ? `${Math.round((Date.now() - lastUpdate) / 1000)}s AGO` : 'NO LINK'}
+              {secondsAgo !== null ? `${secondsAgo}s AGO` : 'NO LINK'}
             </div>
           </div>
         </div>
@@ -124,14 +113,14 @@ const LocationTracker: React.FC<LocationTrackerProps> = ({ onLocationUpdate, isT
           </div>
         )}
 
-        {['denied', 'unavailable', 'timeout'].includes(locationStatus) && (
-          <div className="p-5 bg-red-50 border border-red-100 rounded-2xl">
-            <div className="flex items-start">
-              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-bold uppercase text-[10px] tracking-widest text-red-600 mb-1">Link Failure</p>
-                <p className="text-xs text-slate-600">{errorMessage}</p>
-              </div>
+        {locationStatus !== 'granted' && locationStatus !== 'requesting' && (
+          <div className="flex items-start p-4 bg-rose-50 rounded-xl border border-rose-200 text-rose-800 gap-3">
+            <AlertCircle className="h-5 w-5 text-rose-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-0.5">GPS Signal Offline</div>
+              <p className="text-xs text-rose-600 leading-relaxed font-medium">
+                {errorMessage || 'Browser GPS location request was blocked or timed out. Please allow location permissions.'}
+              </p>
             </div>
           </div>
         )}

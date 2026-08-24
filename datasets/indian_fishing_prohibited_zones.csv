@@ -1,0 +1,25 @@
+zone_id,zone_name,zone_type,state_or_region,start_lat,start_lon,end_lat,end_lon,restriction_type,ban_start,ban_end,authority,severity,label
+INZ001,Gulf of Mannar Biosphere Reserve,MPA,Tamil Nadu,8.35,78.10,9.25,79.30,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ002,Sundarbans National Park,Wildlife Sanctuary,West Bengal,21.45,88.10,22.10,89.00,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ003,Gulf of Kutch Marine National Park,MPA,Gujarat,22.30,68.30,23.10,69.10,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ004,Malvan Marine Sanctuary,MPA,Maharashtra,15.90,73.40,16.30,73.80,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ005,Chilika Lake Outer Channel,Restricted Zone,Odisha,19.50,85.20,19.80,85.60,No Trawling,ALL_YEAR,ALL_YEAR,Odisha Fisheries Dept,MEDIUM,1
+INZ006,Bhitarkanika Marine Sanctuary,Wildlife Sanctuary,Odisha,20.60,86.60,21.00,87.00,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ007,Andaman Tribal Reserve Zone,Protected Area,Andaman Sea,6.50,92.20,13.50,94.00,No Fishing,ALL_YEAR,ALL_YEAR,AN Administration,HIGH,1
+INZ008,Mumbai Port Restricted Zone,Port Zone,Maharashtra,18.85,72.75,19.20,72.95,No Fishing,ALL_YEAR,ALL_YEAR,MbPT,MEDIUM,1
+INZ009,JNPT Port Restricted Zone,Port Zone,Maharashtra,18.90,72.90,19.10,73.10,No Fishing,ALL_YEAR,ALL_YEAR,JNPT,MEDIUM,1
+INZ010,Chennai Port Restricted Zone,Port Zone,Tamil Nadu,13.05,80.25,13.20,80.35,No Fishing,ALL_YEAR,ALL_YEAR,Chennai Port Trust,MEDIUM,1
+INZ011,Kandla Port Restricted Zone,Port Zone,Gujarat,22.90,70.00,23.10,70.30,No Fishing,ALL_YEAR,ALL_YEAR,Kandla Port Authority,MEDIUM,1
+INZ012,Kerala Monsoon Fishing Ban,Seasonal,Kerala,8.00,74.00,12.50,76.00,Seasonal Ban,2025-06-10,2025-08-15,Kerala Fisheries Dept,HIGH,1
+INZ013,Tamil Nadu Monsoon Fishing Ban,Seasonal,Tamil Nadu,8.00,77.00,13.50,80.00,Seasonal Ban,2025-04-15,2025-06-14,TN Fisheries Dept,HIGH,1
+INZ014,Karnataka Monsoon Fishing Ban,Seasonal,Karnataka,11.50,74.00,15.00,75.00,Seasonal Ban,2025-06-01,2025-07-31,Karnataka Fisheries Dept,HIGH,1
+INZ015,Goa Monsoon Fishing Ban,Seasonal,Goa,14.80,73.60,15.80,74.40,Seasonal Ban,2025-06-01,2025-07-31,Goa Fisheries Dept,HIGH,1
+INZ016,Odisha Monsoon Fishing Ban,Seasonal,Odisha,17.80,85.00,21.00,87.50,Seasonal Ban,2025-04-15,2025-05-31,Odisha Fisheries Dept,HIGH,1
+INZ017,West Bengal Fishing Ban,Seasonal,West Bengal,21.00,87.80,22.50,89.20,Seasonal Ban,2025-04-15,2025-05-31,WB Fisheries Dept,HIGH,1
+INZ018,IMBL Buffer India–Sri Lanka,International Boundary,Tamil Nadu,9.00,79.50,10.50,80.30,Restricted Access,ALL_YEAR,ALL_YEAR,Indian Coast Guard,HIGH,1
+INZ019,IMBL Buffer India–Pakistan,International Boundary,Gujarat,22.00,68.00,24.00,66.50,Restricted Access,ALL_YEAR,ALL_YEAR,Indian Coast Guard,HIGH,1
+INZ020,IMBL Buffer India–Bangladesh,International Boundary,West Bengal,21.50,88.50,22.50,89.50,Restricted Access,ALL_YEAR,ALL_YEAR,Indian Coast Guard,HIGH,1
+INZ021,Artificial Reef Protection Zone,Protected Area,Tamil Nadu,10.80,79.80,11.20,80.20,No Trawling,ALL_YEAR,ALL_YEAR,DoF India,MEDIUM,1
+INZ022,Olive Ridley Turtle Nesting Zone,Protected Area,Odisha,19.80,86.20,20.50,87.00,No Fishing,ALL_YEAR,ALL_YEAR,MoEFCC,HIGH,1
+INZ023,Deep Sea Fishing Corridor,Open Sea,Arabian Sea,13.00,72.00,18.00,68.00,Allowed,ALL_YEAR,ALL_YEAR,DoF India,LOW,0
+INZ024,Exclusive Economic Zone (EEZ),Legal Zone,Indian Ocean,6.00,68.00,23.00,97.00,Allowed,ALL_YEAR,ALL_YEAR,DoF India,LOW,0

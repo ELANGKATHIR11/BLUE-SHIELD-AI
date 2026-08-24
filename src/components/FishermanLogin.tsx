@@ -13,7 +13,7 @@
  * ============================================================================
  */
 import React, { useState } from 'react';
-import { Ship, Radio, ArrowRight, AlertCircle, Activity, UserCheck, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { Ship, Radio, ArrowRight, AlertCircle, Activity, UserCheck, Loader2, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { userService } from '../services/userService';
 

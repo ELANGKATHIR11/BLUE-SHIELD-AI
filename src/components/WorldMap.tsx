@@ -230,6 +230,8 @@ const useInterpolatedPosition = (targetLat: number, targetLng: number, duration:
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
+      } else {
+        startPosRef.current = [targetLat, targetLng];
       }
     };
 
@@ -581,10 +583,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const [isFollowing, setIsFollowing] = React.useState(userType === "fisherman");
 
   // Load GIS layers
-  const [indiaEEZ, setIndiaEEZ] = useState<any>(null);
-  const [andamanEEZ, setAndamanEEZ] = useState<any>(null);
-  const [sriLankaEEZ, setSriLankaEEZ] = useState<any>(null);
-  const [maldivesEEZ, setMaldivesEEZ] = useState<any>(null);
+  const [indiaEEZ, setIndiaEEZ] = useState<unknown>(null);
+  const [andamanEEZ, setAndamanEEZ] = useState<unknown>(null);
+  const [sriLankaEEZ, setSriLankaEEZ] = useState<unknown>(null);
+  const [maldivesEEZ, setMaldivesEEZ] = useState<unknown>(null);
 
   useEffect(() => {
     fetch('/data/gis/simplified/india_eez_simplified.geojson')
@@ -903,10 +905,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
             // Add small offset if at same location as Coast Guard
             // Use index to create different offsets for multiple vessels
-            const offset = isAtCoastGuardLocation ? 0.0002 + index * 0.0001 : 0;
-            const boatPosition: [number, number] = isAtCoastGuardLocation
-              ? [boat.location.lat + offset, boat.location.lng + offset]
-              : [boat.location.lat, boat.location.lng];
 
             return (
               <React.Fragment key={`BOAT-GROUP-${boat.aisId}`}>

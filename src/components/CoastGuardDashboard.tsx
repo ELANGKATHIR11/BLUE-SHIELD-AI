@@ -40,36 +40,37 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [activeSpeechId, setActiveSpeechId] = useState<string | null>(null);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<unknown>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   // Speech Recognition (Dictation)
   const toggleSpeechRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => unknown; webkitSpeechRecognition?: new () => unknown }).SpeechRecognition ||
+                              (window as unknown as { webkitSpeechRecognition?: new () => unknown }).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
       return;
     }
 
     if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) (recognitionRef.current as { stop: () => void }).stop();
       setIsListening(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new (SpeechRecognition as any)();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
       const transcript = event.results[0][0].transcript;
       setMessageText((prev) => (prev ? `${prev} ${transcript}` : transcript));
       setIsListening(false);
     };
-    recognition.onerror = (err: any) => {
+    recognition.onerror = (err: unknown) => {
       console.error('Speech Recognition Error:', err);
       setIsListening(false);
     };
@@ -159,12 +160,12 @@ const CoastGuardDashboard: React.FC<CoastGuardDashboardProps> = ({
     }
   };
 
-  const getMessageTimestamp = (ts: any): number => {
+  const getMessageTimestamp = (ts: unknown): number => {
     if (typeof ts === 'number') return ts;
-    if (ts && typeof ts === 'object' && 'seconds' in ts && typeof ts.seconds === 'number') {
-      return ts.seconds * 1000;
+    if (ts && typeof ts === 'object' && 'seconds' in ts && typeof (ts as { seconds: unknown }).seconds === 'number') {
+      return (ts as { seconds: number }).seconds * 1000;
     }
-    return Date.now();
+    return 0;
   };
 
   const formatTime = (timestamp: number) => {

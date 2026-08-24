@@ -340,11 +340,11 @@ class UserService {
     } catch { return []; }
   }
 
-  // Sync to PostgreSQL / PostGIS database
-  async logTelemetryToPostGIS(vesselData: any): Promise<void> {
+  // Authoritative sync to Node.js / Express Backend
+  async syncTelemetryToBackend(vesselData: VesselData): Promise<void> {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-      const response = await fetch(`${baseUrl}/api/vessels/log`, {
+      const response = await fetch(`${baseUrl}/api/vessels/location`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -357,10 +357,15 @@ class UserService {
         })
       });
       const data = await response.json();
-      console.log('📬 PostGIS Telemetry Logged:', data);
+      console.log('📬 Backend Telemetry Synchronized:', data);
     } catch (error) {
-      console.error('⚠️ Failed to sync telemetry to PostGIS:', error);
+      console.error('⚠️ Failed to sync telemetry to Node backend:', error);
     }
+  }
+
+  // Alias for backward compatibility
+  async logTelemetryToPostGIS(vesselData: VesselData): Promise<void> {
+    return this.syncTelemetryToBackend(vesselData);
   }
 }
 

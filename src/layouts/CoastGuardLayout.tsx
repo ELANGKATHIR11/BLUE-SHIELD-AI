@@ -14,7 +14,7 @@
  */
 import React from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
-import { Shield, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 import { CoastGuardNavigation } from '../components/CoastGuardNavigation';
 import { BoatData } from '../App';

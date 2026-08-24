@@ -1,22 +1,46 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2027, 1, 1);
-    }
     
+    // Disallow arbitrary writes to protected collections from clients
+    match /vessels/{vesselId} {
+      allow read: if true;
+      allow write: if false; // Only server Firebase Admin or Postgres backend writes
+    }
+
+    match /vesselLocations/{locId} {
+      allow read: if true;
+      allow write: if false; // Server authoritative ingestion only
+    }
+
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow update: if request.auth != null; // Only authenticated users (Coast Guard) acknowledge
+      allow create, delete: if false; // Server authoritative creation only
+    }
+
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow write: if false; // Prohibited zones are server-immutable
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if request.auth != null && request.auth.token.role == 'COAST_GUARD';
+      allow write: if false; // Immutable server-controlled logs
+    }
+
     match /messages/{messageId} {
-      allow read, write: if true;
+      // Direct messaging between fisherman and coast guard
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

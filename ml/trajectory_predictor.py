@@ -15,8 +15,12 @@ Neural Network Model for Vessel Trajectory Prediction and Zone Violation Detecti
 Predicts future vessel positions and automatically alerts on prohibited zone entry risk
 """
 
-import tensorflow as tf
-from tensorflow import keras
+try:
+    import tensorflow as tf
+    from tensorflow import keras
+except ImportError:
+    tf = None
+    keras = None
 import numpy as np
 import json
 from datetime import datetime, timedelta

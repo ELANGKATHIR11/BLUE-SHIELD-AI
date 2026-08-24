@@ -336,7 +336,7 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ boatData, onAlert, onStatusChange
               <div className="flex items-center justify-between text-[10px] text-slate-500 mt-2 px-2 font-bold uppercase tracking-widest opacity-70">
                 <span>Speed: {trajectoryPrediction.estimatedSpeedMps.toFixed(1)} m/s</span>
                 <span>Heading: {trajectoryPrediction.estimatedHeading.toFixed(0)}°</span>
-                <span>History: {trackerRef.current.getHistoryLength()} pts</span>
+                <span>Points: {trajectoryPrediction.predictedPoints.length}</span>
               </div>
             </div>
           ) : (

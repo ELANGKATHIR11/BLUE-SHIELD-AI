@@ -1,0 +1,986 @@
+[
+  {
+    "id": "INZ001",
+    "name": "Gulf of Mannar Biosphere Reserve",
+    "type": "MPA",
+    "state": "Tamil Nadu",
+    "coordinates": {
+      "lat": 8.8,
+      "lng": 78.69999999999999
+    },
+    "radius": 82.77,
+    "polygon": [
+      [
+        78.1,
+        8.35
+      ],
+      [
+        79.3,
+        8.35
+      ],
+      [
+        79.3,
+        9.25
+      ],
+      [
+        78.1,
+        9.25
+      ],
+      [
+        78.1,
+        8.35
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ002",
+    "name": "Sundarbans National Park",
+    "type": "Wildlife Sanctuary",
+    "state": "West Bengal",
+    "coordinates": {
+      "lat": 21.775,
+      "lng": 88.55
+    },
+    "radius": 58.87,
+    "polygon": [
+      [
+        88.1,
+        21.45
+      ],
+      [
+        89.0,
+        21.45
+      ],
+      [
+        89.0,
+        22.1
+      ],
+      [
+        88.1,
+        22.1
+      ],
+      [
+        88.1,
+        21.45
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ003",
+    "name": "Gulf of Kutch Marine National Park",
+    "type": "MPA",
+    "state": "Gujarat",
+    "coordinates": {
+      "lat": 22.700000000000003,
+      "lng": 68.69999999999999
+    },
+    "radius": 60.51,
+    "polygon": [
+      [
+        68.3,
+        22.3
+      ],
+      [
+        69.1,
+        22.3
+      ],
+      [
+        69.1,
+        23.1
+      ],
+      [
+        68.3,
+        23.1
+      ],
+      [
+        68.3,
+        22.3
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ004",
+    "name": "Malvan Marine Sanctuary",
+    "type": "MPA",
+    "state": "Maharashtra",
+    "coordinates": {
+      "lat": 16.1,
+      "lng": 73.6
+    },
+    "radius": 30.84,
+    "polygon": [
+      [
+        73.4,
+        15.9
+      ],
+      [
+        73.8,
+        15.9
+      ],
+      [
+        73.8,
+        16.3
+      ],
+      [
+        73.4,
+        16.3
+      ],
+      [
+        73.4,
+        15.9
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ005",
+    "name": "Chilika Lake Outer Channel",
+    "type": "Restricted Zone",
+    "state": "Odisha",
+    "coordinates": {
+      "lat": 19.65,
+      "lng": 85.4
+    },
+    "radius": 26.77,
+    "polygon": [
+      [
+        85.2,
+        19.5
+      ],
+      [
+        85.6,
+        19.5
+      ],
+      [
+        85.6,
+        19.8
+      ],
+      [
+        85.2,
+        19.8
+      ],
+      [
+        85.2,
+        19.5
+      ]
+    ],
+    "restriction": "No Trawling",
+    "authority": "Odisha Fisheries Dept",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ006",
+    "name": "Bhitarkanika Marine Sanctuary",
+    "type": "Wildlife Sanctuary",
+    "state": "Odisha",
+    "coordinates": {
+      "lat": 20.8,
+      "lng": 86.8
+    },
+    "radius": 30.44,
+    "polygon": [
+      [
+        86.6,
+        20.6
+      ],
+      [
+        87.0,
+        20.6
+      ],
+      [
+        87.0,
+        21.0
+      ],
+      [
+        86.6,
+        21.0
+      ],
+      [
+        86.6,
+        20.6
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ007",
+    "name": "Andaman Tribal Reserve Zone",
+    "type": "Protected Area",
+    "state": "Andaman Sea",
+    "coordinates": {
+      "lat": 10.0,
+      "lng": 93.1
+    },
+    "radius": 401.45,
+    "polygon": [
+      [
+        92.2,
+        6.5
+      ],
+      [
+        94.0,
+        6.5
+      ],
+      [
+        94.0,
+        13.5
+      ],
+      [
+        92.2,
+        13.5
+      ],
+      [
+        92.2,
+        6.5
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "AN Administration",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ008",
+    "name": "Mumbai Port Restricted Zone",
+    "type": "Port Zone",
+    "state": "Maharashtra",
+    "coordinates": {
+      "lat": 19.025,
+      "lng": 72.85
+    },
+    "radius": 22.12,
+    "polygon": [
+      [
+        72.75,
+        18.85
+      ],
+      [
+        72.95,
+        18.85
+      ],
+      [
+        72.95,
+        19.2
+      ],
+      [
+        72.75,
+        19.2
+      ],
+      [
+        72.75,
+        18.85
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MbPT",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ009",
+    "name": "JNPT Port Restricted Zone",
+    "type": "Port Zone",
+    "state": "Maharashtra",
+    "coordinates": {
+      "lat": 19.0,
+      "lng": 73.0
+    },
+    "radius": 15.3,
+    "polygon": [
+      [
+        72.9,
+        18.9
+      ],
+      [
+        73.1,
+        18.9
+      ],
+      [
+        73.1,
+        19.1
+      ],
+      [
+        72.9,
+        19.1
+      ],
+      [
+        72.9,
+        18.9
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "JNPT",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ010",
+    "name": "Chennai Port Restricted Zone",
+    "type": "Port Zone",
+    "state": "Tamil Nadu",
+    "coordinates": {
+      "lat": 13.125,
+      "lng": 80.3
+    },
+    "radius": 9.94,
+    "polygon": [
+      [
+        80.25,
+        13.05
+      ],
+      [
+        80.35,
+        13.05
+      ],
+      [
+        80.35,
+        13.2
+      ],
+      [
+        80.25,
+        13.2
+      ],
+      [
+        80.25,
+        13.05
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "Chennai Port Trust",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ011",
+    "name": "Kandla Port Restricted Zone",
+    "type": "Port Zone",
+    "state": "Gujarat",
+    "coordinates": {
+      "lat": 23.0,
+      "lng": 70.15
+    },
+    "radius": 18.96,
+    "polygon": [
+      [
+        70.0,
+        22.9
+      ],
+      [
+        70.3,
+        22.9
+      ],
+      [
+        70.3,
+        23.1
+      ],
+      [
+        70.0,
+        23.1
+      ],
+      [
+        70.0,
+        22.9
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "Kandla Port Authority",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ012",
+    "name": "Kerala Monsoon Fishing Ban",
+    "type": "Seasonal",
+    "state": "Kerala",
+    "coordinates": {
+      "lat": 10.25,
+      "lng": 75.0
+    },
+    "radius": 273.06,
+    "polygon": [
+      [
+        74.0,
+        8.0
+      ],
+      [
+        76.0,
+        8.0
+      ],
+      [
+        76.0,
+        12.5
+      ],
+      [
+        74.0,
+        12.5
+      ],
+      [
+        74.0,
+        8.0
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "Kerala Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-06-10",
+      "end": "2025-08-15"
+    }
+  },
+  {
+    "id": "INZ013",
+    "name": "Tamil Nadu Monsoon Fishing Ban",
+    "type": "Seasonal",
+    "state": "Tamil Nadu",
+    "coordinates": {
+      "lat": 10.75,
+      "lng": 78.5
+    },
+    "radius": 346.89,
+    "polygon": [
+      [
+        77.0,
+        8.0
+      ],
+      [
+        80.0,
+        8.0
+      ],
+      [
+        80.0,
+        13.5
+      ],
+      [
+        77.0,
+        13.5
+      ],
+      [
+        77.0,
+        8.0
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "TN Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-04-15",
+      "end": "2025-06-14"
+    }
+  },
+  {
+    "id": "INZ014",
+    "name": "Karnataka Monsoon Fishing Ban",
+    "type": "Seasonal",
+    "state": "Karnataka",
+    "coordinates": {
+      "lat": 13.25,
+      "lng": 74.5
+    },
+    "radius": 201.97,
+    "polygon": [
+      [
+        74.0,
+        11.5
+      ],
+      [
+        75.0,
+        11.5
+      ],
+      [
+        75.0,
+        15.0
+      ],
+      [
+        74.0,
+        15.0
+      ],
+      [
+        74.0,
+        11.5
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "Karnataka Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-06-01",
+      "end": "2025-07-31"
+    }
+  },
+  {
+    "id": "INZ015",
+    "name": "Goa Monsoon Fishing Ban",
+    "type": "Seasonal",
+    "state": "Goa",
+    "coordinates": {
+      "lat": 15.3,
+      "lng": 74.0
+    },
+    "radius": 70.23,
+    "polygon": [
+      [
+        73.6,
+        14.8
+      ],
+      [
+        74.4,
+        14.8
+      ],
+      [
+        74.4,
+        15.8
+      ],
+      [
+        73.6,
+        15.8
+      ],
+      [
+        73.6,
+        14.8
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "Goa Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-06-01",
+      "end": "2025-07-31"
+    }
+  },
+  {
+    "id": "INZ016",
+    "name": "Odisha Monsoon Fishing Ban",
+    "type": "Seasonal",
+    "state": "Odisha",
+    "coordinates": {
+      "lat": 19.4,
+      "lng": 86.25
+    },
+    "radius": 220.98,
+    "polygon": [
+      [
+        85.0,
+        17.8
+      ],
+      [
+        87.5,
+        17.8
+      ],
+      [
+        87.5,
+        21.0
+      ],
+      [
+        85.0,
+        21.0
+      ],
+      [
+        85.0,
+        17.8
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "Odisha Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-04-15",
+      "end": "2025-05-31"
+    }
+  },
+  {
+    "id": "INZ017",
+    "name": "West Bengal Fishing Ban",
+    "type": "Seasonal",
+    "state": "West Bengal",
+    "coordinates": {
+      "lat": 21.75,
+      "lng": 88.5
+    },
+    "radius": 110.37,
+    "polygon": [
+      [
+        87.8,
+        21.0
+      ],
+      [
+        89.2,
+        21.0
+      ],
+      [
+        89.2,
+        22.5
+      ],
+      [
+        87.8,
+        22.5
+      ],
+      [
+        87.8,
+        21.0
+      ]
+    ],
+    "restriction": "Seasonal Ban",
+    "authority": "WB Fisheries Dept",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "2025-04-15",
+      "end": "2025-05-31"
+    }
+  },
+  {
+    "id": "INZ018",
+    "name": "IMBL Buffer India\u2013Sri Lanka",
+    "type": "International Boundary",
+    "state": "Tamil Nadu",
+    "coordinates": {
+      "lat": 9.75,
+      "lng": 79.9
+    },
+    "radius": 94.21,
+    "polygon": [
+      [
+        79.5,
+        9.0
+      ],
+      [
+        80.3,
+        9.0
+      ],
+      [
+        80.3,
+        10.5
+      ],
+      [
+        79.5,
+        10.5
+      ],
+      [
+        79.5,
+        9.0
+      ]
+    ],
+    "restriction": "Restricted Access",
+    "authority": "Indian Coast Guard",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ019",
+    "name": "IMBL Buffer India\u2013Pakistan",
+    "type": "International Boundary",
+    "state": "Gujarat",
+    "coordinates": {
+      "lat": 23.0,
+      "lng": 67.25
+    },
+    "radius": 135.12,
+    "polygon": [
+      [
+        68.0,
+        22.0
+      ],
+      [
+        66.5,
+        22.0
+      ],
+      [
+        66.5,
+        24.0
+      ],
+      [
+        68.0,
+        24.0
+      ],
+      [
+        68.0,
+        22.0
+      ]
+    ],
+    "restriction": "Restricted Access",
+    "authority": "Indian Coast Guard",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ020",
+    "name": "IMBL Buffer India\u2013Bangladesh",
+    "type": "International Boundary",
+    "state": "West Bengal",
+    "coordinates": {
+      "lat": 22.0,
+      "lng": 89.0
+    },
+    "radius": 75.82,
+    "polygon": [
+      [
+        88.5,
+        21.5
+      ],
+      [
+        89.5,
+        21.5
+      ],
+      [
+        89.5,
+        22.5
+      ],
+      [
+        88.5,
+        22.5
+      ],
+      [
+        88.5,
+        21.5
+      ]
+    ],
+    "restriction": "Restricted Access",
+    "authority": "Indian Coast Guard",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ021",
+    "name": "Artificial Reef Protection Zone",
+    "type": "Protected Area",
+    "state": "Tamil Nadu",
+    "coordinates": {
+      "lat": 11.0,
+      "lng": 80.0
+    },
+    "radius": 31.16,
+    "polygon": [
+      [
+        79.8,
+        10.8
+      ],
+      [
+        80.2,
+        10.8
+      ],
+      [
+        80.2,
+        11.2
+      ],
+      [
+        79.8,
+        11.2
+      ],
+      [
+        79.8,
+        10.8
+      ]
+    ],
+    "restriction": "No Trawling",
+    "authority": "DoF India",
+    "severity": "MEDIUM",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ022",
+    "name": "Olive Ridley Turtle Nesting Zone",
+    "type": "Protected Area",
+    "state": "Odisha",
+    "coordinates": {
+      "lat": 20.15,
+      "lng": 86.6
+    },
+    "radius": 57.08,
+    "polygon": [
+      [
+        86.2,
+        19.8
+      ],
+      [
+        87.0,
+        19.8
+      ],
+      [
+        87.0,
+        20.5
+      ],
+      [
+        86.2,
+        20.5
+      ],
+      [
+        86.2,
+        19.8
+      ]
+    ],
+    "restriction": "No Fishing",
+    "authority": "MoEFCC",
+    "severity": "HIGH",
+    "label": 1,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ023",
+    "name": "Deep Sea Fishing Corridor",
+    "type": "Open Sea",
+    "state": "Arabian Sea",
+    "coordinates": {
+      "lat": 15.5,
+      "lng": 70.0
+    },
+    "radius": 350.95,
+    "polygon": [
+      [
+        72.0,
+        13.0
+      ],
+      [
+        68.0,
+        13.0
+      ],
+      [
+        68.0,
+        18.0
+      ],
+      [
+        72.0,
+        18.0
+      ],
+      [
+        72.0,
+        13.0
+      ]
+    ],
+    "restriction": "Allowed",
+    "authority": "DoF India",
+    "severity": "LOW",
+    "label": 0,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  },
+  {
+    "id": "INZ024",
+    "name": "Exclusive Economic Zone (EEZ)",
+    "type": "Legal Zone",
+    "state": "Indian Ocean",
+    "coordinates": {
+      "lat": 14.5,
+      "lng": 82.5
+    },
+    "radius": 1817.96,
+    "polygon": [
+      [
+        68.0,
+        6.0
+      ],
+      [
+        97.0,
+        6.0
+      ],
+      [
+        97.0,
+        23.0
+      ],
+      [
+        68.0,
+        23.0
+      ],
+      [
+        68.0,
+        6.0
+      ]
+    ],
+    "restriction": "Allowed",
+    "authority": "DoF India",
+    "severity": "LOW",
+    "label": 0,
+    "ban_period": {
+      "start": "ALL_YEAR",
+      "end": "ALL_YEAR"
+    }
+  }
+]

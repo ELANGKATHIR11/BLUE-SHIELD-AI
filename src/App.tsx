@@ -24,6 +24,7 @@ import { CoastGuardTrackingPage } from './pages/CoastGuardTrackingPage';
 import { CoastGuardCommunicationPage } from './pages/CoastGuardCommunicationPage';
 
 import { userService, Message } from './services/userService';
+import { vesselApiService } from './services/vesselApiService';
 import { checkGeofence } from './engines/geofence';
 import { calculateRisk } from './engines/riskModel';
 import { VesselTracker } from './engines/kalmanFilter';
@@ -328,6 +329,12 @@ function App() {
       setBoatData(newBoat);
       setIsTracking(true);
       userService.storeVesselData(newBoat);
+      vesselApiService.registerVessel({
+        aisId,
+        boatId,
+        fishermanName,
+        contactInfo
+      }).catch(err => console.warn('Backend vessel registration sync warning:', err));
       addAlert({
         type: 'info',
         message: `System active. AIS Transponder ID: ${aisId}`,
@@ -369,6 +376,15 @@ function App() {
     setBoatData(updatedBoat);
     userService.updateUserLocation(updatedBoat.aisId, newLocation);
     userService.storeVesselData(updatedBoat);
+    vesselApiService.sendTelemetry({
+      vesselId: updatedBoat.aisId,
+      aisId: updatedBoat.aisId,
+      lat,
+      lng,
+      speed: updatedBoat.speed,
+      heading: updatedBoat.heading,
+      source: 'browser-gps'
+    }).catch(err => console.warn('Backend location sync warning:', err));
   };
 
   const updateBoatStatus = (newStatus: 'safe' | 'warning' | 'danger') => {

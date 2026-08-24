@@ -59,7 +59,7 @@ export default function CoastGuardAIControlCenter() {
   const [metrics, setMetrics] = useState<EngineMetrics[]>([]);
   const [healthScore, setHealthScore] = useState(92);
   const [telemetrySnapshot, setTelemetrySnapshot] = useState<TelemetrySnapshot | null>(null);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [systemStatus, setSystemStatus] = useState<'operational' | 'warning' | 'critical'>('operational');
   const [dismissedRecommendations, setDismissedRecommendations] = useState<Set<string>>(new Set());
   const activeEngines = metrics.length || 12; // Fallback to 12 if metrics hasn't loaded 12 engines yet

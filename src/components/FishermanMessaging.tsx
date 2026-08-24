@@ -34,7 +34,7 @@ const FishermanMessaging: React.FC<FishermanMessagingProps> = ({ boatData }) => 
   const [activeSpeechId, setActiveSpeechId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<unknown>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -62,30 +62,31 @@ const FishermanMessaging: React.FC<FishermanMessagingProps> = ({ boatData }) => 
 
   // Voice Dictation (Speech-to-Text) Setup
   const toggleSpeechRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => unknown; webkitSpeechRecognition?: new () => unknown }).SpeechRecognition ||
+                              (window as unknown as { webkitSpeechRecognition?: new () => unknown }).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
       return;
     }
 
     if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) (recognitionRef.current as { stop: () => void }).stop();
       setIsListening(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new (SpeechRecognition as any)();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
       const transcript = event.results[0][0].transcript;
       setNewMessage((prev) => (prev ? `${prev} ${transcript}` : transcript));
       setIsListening(false);
     };
-    recognition.onerror = (err: any) => {
+    recognition.onerror = (err: unknown) => {
       console.error('Speech Recognition Error:', err);
       setIsListening(false);
     };
@@ -240,7 +241,7 @@ const FishermanMessaging: React.FC<FishermanMessagingProps> = ({ boatData }) => 
                     </button>
                     <AlertTriangle className={`h-3 w-3 ${getPriorityColor(msg.priority)}`} />
                     <span className="text-[10px] font-mono opacity-60">
-                      {new Date((msg.timestamp as {seconds?: number})?.seconds ? (msg.timestamp as {seconds: number}).seconds * 1000 : (typeof msg.timestamp === 'number' ? msg.timestamp : Date.now())).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date((msg.timestamp as {seconds?: number})?.seconds ? (msg.timestamp as {seconds: number}).seconds * 1000 : (typeof msg.timestamp === 'number' ? msg.timestamp : 0)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
