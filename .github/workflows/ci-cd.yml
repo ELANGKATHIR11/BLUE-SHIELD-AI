@@ -1,0 +1,139 @@
+name: Blue Shield AI — Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. FRONTEND VALIDATION & BUILD
+  # ============================================================================
+  frontend-ci:
+    name: 🌐 Frontend Lint, Typecheck & Bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: TypeScript Static Typecheck
+        run: npx tsc --noEmit
+
+      - name: Production Vite Build
+        run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyBc2uadH4AA3Q5v9ooSAnhukZ2bUUoeLcI' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'blue-shield-live-101' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'blue-shield-live-101.firebaseapp.com' }}
+
+      - name: Upload Production Dist Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
+
+  # ============================================================================
+  # 2. BACKEND API & SERVICE TEST SUITE
+  # ============================================================================
+  backend-ci:
+    name: ⚡ Backend Unit & Geofence Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: npm ci
+
+      - name: Run Backend Automated Test Suite
+        run: npm test
+
+  # ============================================================================
+  # 3. PYTHON ML INFERENCE VALIDATION
+  # ============================================================================
+  ml-ci:
+    name: 🧠 Python ML Service Syntax & Integrity
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install ML Dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flask flask-cors numpy shapely pytest
+
+      - name: Validate ML Scripts & Compile
+        run: |
+          python -m py_compile app.py trajectory_predictor.py zone_detector.py
+          if [ -f test_danger_detection.py ]; then python test_danger_detection.py; fi
+
+  # ============================================================================
+  # 4. FIREBASE RULES & HOSTING DEPLOYMENT
+  # ============================================================================
+  deploy:
+    name: 🚀 Deploy to Firebase Production Hosting
+    needs: [frontend-ci, backend-ci, ml-ci]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Download Built Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy to Firebase Hosting & Rules
+        if: env.FIREBASE_TOKEN != '' || env.FIREBASE_SERVICE_ACCOUNT != ''
+        run: |
+          npx -y firebase-tools deploy --only hosting,firestore:rules,firestore:indexes --project blue-shield-live-101 --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BLUE_SHIELD_LIVE_101 }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
