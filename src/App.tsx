@@ -305,7 +305,7 @@ function App() {
                 senderId: 'COAST_GUARD',
                 senderName: 'Coast Guard Command',
                 receiverId: boat.aisId,
-                message: eezResult.alertMessage,
+                message: eezResult.alertMessage || 'CRITICAL: Vessel detected inside unauthorized international waters!',
                 priority: 'high'
               });
             }
