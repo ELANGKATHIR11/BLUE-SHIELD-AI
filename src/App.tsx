@@ -73,11 +73,27 @@ export interface CoastGuardVessel {
 }
 
 function App() {
-  const [boatData, setBoatData] = useState<BoatData | null>(null);
+  const [boatData, setBoatData] = useState<BoatData | null>(() => {
+    try {
+      const saved = localStorage.getItem('blue_shield_fisherman_vessel');
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return {
+      aisId: 'AIS-TN-06-8821',
+      boatId: 'TN-06-MM-4421',
+      fishermanName: 'K. Murugan',
+      contactInfo: '+91 98401 23456',
+      location: { lat: 9.2884, lng: 79.3129, timestamp: Date.now() },
+      status: 'safe',
+      speed: 8.5,
+      heading: 145,
+      lastUpdate: Date.now()
+    };
+  });
   const [allBoats, setAllBoats] = useState<BoatData[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isTracking, setIsTracking] = useState(false);
+  const [isTracking, setIsTracking] = useState(true);
   const [coastGuardVessel, setCoastGuardVessel] = useState<CoastGuardVessel | null>(null);
   const [isCoastGuardTracking, setIsCoastGuardTracking] = useState(false);
   const [isCGAuthenticated, setIsCGAuthenticated] = useState(() => {
@@ -327,6 +343,9 @@ function App() {
         contactInfo
       };
       setBoatData(newBoat);
+      try {
+        localStorage.setItem('blue_shield_fisherman_vessel', JSON.stringify(newBoat));
+      } catch { /* ignore */ }
       setIsTracking(true);
       userService.storeVesselData(newBoat);
       vesselApiService.registerVessel({
