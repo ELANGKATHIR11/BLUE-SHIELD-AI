@@ -194,14 +194,15 @@ function App() {
     }
   }, [isCGAuthenticated]);
 
-  // Message Subscriptions
+  // Message Subscriptions (Global / Fisherman / Coast Guard)
   useEffect(() => {
-    const aisId = boatData ? boatData.aisId : null;
-    const unsubscribe = userService.subscribeToMessages(aisId, (msgs) => {
+    // If CG is authenticated, listen to all vessel messages; otherwise listen for myBoat identifiers
+    const queryId = isCGAuthenticated ? null : (boatData ? [boatData.aisId, boatData.boatId] : null);
+    const unsubscribe = userService.subscribeToMessages(queryId, (msgs) => {
       setMessages(msgs);
       if (boatData) {
         const lastMessage = msgs[msgs.length - 1];
-        if (lastMessage && lastMessage.senderId === 'COAST_GUARD' && lastMessage.receiverId === boatData.aisId) {
+        if (lastMessage && lastMessage.senderId === 'COAST_GUARD' && (lastMessage.receiverId === boatData.aisId || lastMessage.receiverId === boatData.boatId)) {
           setAlerts(prev => {
             const exists = prev.some(a => a.id === lastMessage.id);
             if (exists) return prev;
@@ -221,7 +222,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [boatData]);
+  }, [boatData?.aisId, boatData?.boatId, isCGAuthenticated]);
 
   // Risk Calculations in CG Mode
   useEffect(() => {
