@@ -252,16 +252,28 @@ class UserService {
     try {
       const messageCol = collection(db, this.messagesCollection);
       const messageRef = doc(messageCol);
-      const newMessage: Message = {
-        ...message,
+      
+      // Sanitize fields to ensure no undefined property is passed to Firestore
+      const payload: Record<string, unknown> = {
         id: messageRef.id,
+        senderId: message.senderId || 'UNKNOWN',
+        receiverId: message.receiverId || 'COAST_GUARD',
+        message: message.message || '',
+        priority: message.priority || 'low',
+        status: 'sent',
         timestamp: serverTimestamp(),
-        status: 'sent'
+        senderName: message.senderName || (message.senderId === 'COAST_GUARD' ? 'Coast Guard Command' : 'Fisherman Vessel'),
       };
-      await setDoc(messageRef, newMessage);
-      console.log("✅ Message sent successfully:", newMessage.id);
+
+      if (message.audioData) {
+        payload.audioData = message.audioData;
+        payload.isVoiceNote = true;
+      }
+
+      await setDoc(messageRef, payload);
+      console.log("✅ Message sent successfully:", messageRef.id);
     } catch (error) {
-      console.error("❌ Error sending message:", error);
+      console.error("❌ Error sending message to Firebase:", error);
       throw error;
     }
   }
