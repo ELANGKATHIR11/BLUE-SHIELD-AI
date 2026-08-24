@@ -267,19 +267,19 @@ class UserService {
   }
 
   subscribeToMessages(
-    aisId: string | null, 
+    identifiers: string | string[] | null, 
     callback: (messages: Message[]) => void
   ): () => void {
-    // If aisId is null, we are the Coast Guard (receive all messages)
-    // If aisId is provided, we are a fisherman (receive messages to us OR from us)
+    // If identifiers is null, we are the Coast Guard (receive all messages)
+    // If identifiers is provided, match if senderId or receiverId matches any ID (aisId, boatId, etc.)
+    const ids = Array.isArray(identifiers) ? identifiers : (identifiers ? [identifiers] : null);
     const q = query(collection(db, this.messagesCollection));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const messages: Message[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data() as Message;
-        // Client-side filtering if complex query is hard
-        if (!aisId || data.senderId === aisId || data.receiverId === aisId) {
+        if (!ids || ids.includes(data.senderId) || ids.includes(data.receiverId)) {
           messages.push(data);
         }
       });

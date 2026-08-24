@@ -39,20 +39,21 @@ const FishermanMessaging: React.FC<FishermanMessagingProps> = ({ boatData }) => 
   const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    if (boatData.aisId) {
-      const unsubscribe = userService.subscribeToMessages(boatData.aisId, (msgs) => {
+    const vesselIds = [boatData.aisId, boatData.boatId].filter(Boolean);
+    if (vesselIds.length > 0) {
+      const unsubscribe = userService.subscribeToMessages(vesselIds, (msgs) => {
         setMessages(msgs);
         
         // Auto-mark unread messages from Coast Guard as read
         msgs.forEach(msg => {
-          if (msg.receiverId === boatData.aisId && msg.status !== 'read') {
+          if (vesselIds.includes(msg.receiverId) && msg.status !== 'read') {
             userService.markMessageAsRead(msg.id);
           }
         });
       });
       return () => unsubscribe();
     }
-  }, [boatData.aisId]);
+  }, [boatData.aisId, boatData.boatId]);
 
   useEffect(() => {
     if (scrollRef.current) {

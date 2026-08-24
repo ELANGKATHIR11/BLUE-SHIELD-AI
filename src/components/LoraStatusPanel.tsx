@@ -34,7 +34,7 @@ interface PacketLog {
   compressed: number;
 }
 
-const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, anomalyFlag }) => {
+export const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, anomalyFlag }) => {
   const { t } = useLanguage();
   const [stats, setStats] = useState<LoRaStats | null>(null);
   const [bufferStats, setBufferStats] = useState({ pending: 0, failed: 0, total: 0 });
@@ -77,33 +77,49 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
         size: result.packetSizeBytes,
         compressed: result.compressedSizeBytes,
       }, ...prev].slice(0, 6));
+    } catch (err) {
+      console.warn('LoRa transmission error:', err);
     } finally {
       setIsTransmitting(false);
     }
   }, [boatData, zoneFlag, anomalyFlag, isTransmitting]);
 
-  // Auto-transmit every 45 seconds (decoupled with setTimeout)
+  // Initial stats load & background auto-transmit every 45s
   useEffect(() => {
-    if (!boatData) return;
-    const timer = setTimeout(() => {
-      transmit();
-    }, 500);
-    intervalRef.current = setInterval(transmit, 45_000);
+    let isMounted = true;
+    const loadInitialStats = async () => {
+      try {
+        const initialStats = getLoRaStats();
+        const initialBuffer = await getBufferStats();
+        if (isMounted) {
+          setStats(initialStats);
+          setBufferStats(initialBuffer);
+        }
+      } catch (err) {
+        console.warn('Error loading initial LoRa stats:', err);
+      }
+    };
+    loadInitialStats();
+
+    if (boatData) {
+      const timer = setTimeout(() => {
+        if (isMounted) transmit();
+      }, 1000);
+      intervalRef.current = setInterval(() => {
+        if (isMounted) transmit();
+      }, 45_000);
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    }
     return () => {
-      clearTimeout(timer);
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      isMounted = false;
     };
-  }, [boatData?.aisId, transmit, boatData]);
+  }, [boatData?.aisId]);
 
-  useEffect(() => {
-    const loadStats = async () => {
-      setStats(getLoRaStats());
-      setBufferStats(await getBufferStats());
-    };
-    loadStats();
-  }, []);
-
-  const signalBars = (q: LoRaStats['signalQuality']) => {
+  const signalBars = (q?: LoRaStats['signalQuality']) => {
     const count = q === 'excellent' ? 4 : q === 'good' ? 3 : q === 'fair' ? 2 : q === 'poor' ? 1 : 0;
     const color = count >= 3 ? 'bg-green-400' : count >= 2 ? 'bg-yellow-400' : 'bg-red-400';
     return (
@@ -114,6 +130,11 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
       </div>
     );
   };
+
+  const totalPackets = stats?.totalPacketsSent ?? 0;
+  const successfulPackets = stats?.successfulPackets ?? 0;
+  const deliveryRate = totalPackets > 0 ? (successfulPackets / totalPackets) * 100 : 100;
+  const avgCompression = stats?.avgCompressionRatio ? `${(stats.avgCompressionRatio * 10).toFixed(0)}%` : '58%';
 
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-50">
@@ -127,8 +148,8 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {stats && signalBars(stats.signalQuality)}
-            <span className="text-[10px] font-bold uppercase">{stats?.signalQuality.replace('_', ' ') ?? '—'}</span>
+            {signalBars(stats?.signalQuality)}
+            <span className="text-[10px] font-bold uppercase">{stats?.signalQuality ? stats.signalQuality.replace('_', ' ') : 'STANDBY'}</span>
           </div>
         </div>
       </div>
@@ -138,12 +159,12 @@ const LoraStatusPanel: React.FC<LoraStatusPanelProps> = ({ boatData, zoneFlag, a
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-indigo-50 rounded-xl p-2.5 text-center border border-indigo-100">
             <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">{t('lora.packets')}</div>
-            <div className="font-mono font-bold text-lg text-indigo-900">{stats?.totalPackets ?? 0}</div>
-            <div className="text-[9px] text-indigo-500">{stats?.successRate.toFixed(1) ?? '100'}% {t('lora.delivery')}</div>
+            <div className="font-mono font-bold text-lg text-indigo-900">{totalPackets}</div>
+            <div className="text-[9px] text-indigo-500">{deliveryRate.toFixed(0)}% {t('lora.delivery')}</div>
           </div>
           <div className="bg-purple-50 rounded-xl p-2.5 text-center border border-purple-100">
             <div className="text-[9px] font-bold text-purple-400 uppercase tracking-wider">{t('lora.compression')}</div>
-            <div className="font-mono font-bold text-lg text-purple-900">{stats?.avgCompressionRatio ?? '58'}%</div>
+            <div className="font-mono font-bold text-lg text-purple-900">{avgCompression}</div>
             <div className="text-[9px] text-purple-500">Delta+Bitpack</div>
           </div>
           <div className="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-200">
